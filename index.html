@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Web audio demo</title>
+    <link href="styles/app.css" rel="stylesheet" type="text/css">
+    <script src="https://code.createjs.com/1.0.0/soundjs.min.js"></script></head>
+  </head>
+  <body>
+
+    <div class="wrapper">
+
+      <header>
+        <h1>Web audio demo</h1>
+      </header>
+
+      <section class="main-controls">
+        <canvas class="visualizer" height="60px"></canvas>
+      </section>
+
+			<div id="log-container">
+				<pre id="log"></pre>
+      </div>
+      
+      <form action="#" onsubmit="onFormSubmit(); return false;" id="frequencyForm">
+        <label>Tone frequencies (separated by ',')</label>
+        <input type="text" id="playbackFrequencies"><br>
+        <label>Tone duration (in seconds)</label>
+        <input type="text" id="playbackDuration"><br>
+        <input type="submit">
+      </form>
+
+      <button type="button" onclick="onStartAudio()">Start Audio Playback</button>
+
+      <button type="button" onclick="onStopAudio()">Stop Audio Playback</button>
+
+      <table style="width:100%">
+        <tr>
+          <th>Property</th>
+          <th>Value</th>
+        </tr>
+        <tr>
+          <td>Loudest frequency recorded</td>
+          <td id='loudestFrequency'>0</td>
+        </tr>
+        <tr>
+          <td>Sample rate</td>
+          <td id='sampleRate'>0</td>
+        </tr>
+        <tr>
+          <td>Maximum possible frequency</td>
+          <td id='maxFrequency'>0</td>
+        </tr>
+      </table>
+
+    </div>
+
+    <script src="scripts/app.js"></script>
+    <script src="scripts/debug.js"></script>
+
+  </body>
+</html>
