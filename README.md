@@ -8,4 +8,5 @@ One way of doing this is to use `live-server-https`. In order to set this up, fo
 
 As of right now, the prototype can only do the following:
 * Play a series of specified frequencies for a specified duration
+* Record a series of sounds and see what frequencies were played and for what duration (There is some leeway when it comes to what frequencies are the same. As long as there is a 50 Hz difference between 2 frequencies, they are considered one and the same).
 * Record the currently loudest frequency (kinda)
