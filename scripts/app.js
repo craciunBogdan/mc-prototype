@@ -1,8 +1,10 @@
 // set up basic variables for app
+let recording = false;
+let timeOfRecording = 0;
+let recordedValues = [];
 const canvas = document.querySelector('.visualizer');
 const canvasCtx = canvas.getContext("2d");
 let audioCtx = new AudioContext();
-audioCtx.resume();
 
 // oscillator does the audio playback
 const oscillator = audioCtx.createOscillator();
@@ -25,6 +27,7 @@ let onFormSubmit = function () {
 }
 
 let onStartAudio = function () {
+  audioCtx.resume();
   currentTime = audioCtx.currentTime;
   for (var i = 0; i < playbackFrequencies.length; i++) {
     oscillator.frequency.setValueAtTime(playbackFrequencies[i], currentTime + (i * playbackDuration));
@@ -33,7 +36,46 @@ let onStartAudio = function () {
 }
 
 let onStopAudio = function () {
+  audioCtx.resume();
   oscillator.disconnect(audioCtx.destination);
+}
+
+let onStartRecord = function () {
+  timeOfRecording = audioCtx.currentTime;
+  recordedValues = [];
+  recording = true;
+}
+
+let onStopRecord = function () {
+  recording = false;
+  console.log(audioCtx.currentTime - timeOfRecording);
+  console.log(recordedValues.length + " values recorded:\n" + recordedValues);
+  var realSampleRate = recordedValues.length / (audioCtx.currentTime - timeOfRecording);
+  var recordingDictionary = processRecording(recordedValues, realSampleRate);
+  console.log("The following records represent the frequencies and the duration they were recorded for:");
+  console.log(recordingDictionary);
+}
+
+let processRecording = function (recordedValues, realSampleRate) {
+  if (recordedValues < 1) {
+    return {};
+  }
+
+  var recordingDictionary = {};
+  var counter = 1;
+  
+  for (var i = 1; i < recordedValues.length; i++) {
+    if (recordedValues[i] < recordedValues[i - 1] + 100 &&
+      recordedValues[i] > recordedValues[i - 1] - 100) {
+        counter++;
+    } else {
+      recordingDictionary[recordedValues[i - 1]] = counter / realSampleRate;
+      counter = 1;
+    }
+  }
+  recordingDictionary[recordedValues[recordedValues.length - 1]] = counter / realSampleRate;
+
+  return recordingDictionary;
 }
 
 //main block for doing the audio recording
@@ -56,6 +98,7 @@ if (navigator.mediaDevices.getUserMedia) {
 }
 
 function visualize(stream) {
+  audioCtx.resume();
 
   const source = audioCtx.createMediaStreamSource(stream);
 
@@ -89,11 +132,16 @@ function visualize(stream) {
     let sampleRate = audioCtx.sampleRate;
     let maxFrequency = sampleRate / 2;
     // This converts the frequency data from their representation into Hz.
-    let loudestFrequency = Math.round(maxFrequency / bufferLength) * process_data(dataArray);
-  
+    let loudestFrequency = Math.round(maxFrequency / bufferLength * process_data(dataArray));
+
     document.getElementById('loudestFrequency').innerHTML = loudestFrequency;
     document.getElementById('sampleRate').innerHTML = sampleRate;
     document.getElementById('maxFrequency').innerHTML = maxFrequency;
+
+    // This is probably the worst way to do this.
+    if (recording) {
+      recordedValues.push(loudestFrequency);
+    }
 
     //Clear the canvas
     canvasCtx.fillStyle = 'rgb(200, 200, 200)';
