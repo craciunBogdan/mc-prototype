@@ -22,14 +22,20 @@
 			<div id="log-container">
 				<pre id="log"></pre>
       </div>
-      
+
+      <form action="#" onsubmit="onFormRecordSubmit(); return false;" id="recordingForm">
+        <label>Recording data type</label>
+        <input type="text" id="recordedDataType"><br>
+        <input type="submit">
+      </form>
+
       <button type="button" onclick="onStartRecord()">Start Recording</button>
 
       <button type="button" onclick="onStopRecord()">Stop Recording</button>
 
       <br>
 
-      <form action="#" onsubmit="onFormSubmit(); return false;" id="frequencyForm">
+      <form action="#" onsubmit="onFormPlaybackSubmit(); return false;" id="frequencyForm">
         <label>Tone frequencies (separated by ',')</label>
         <input type="text" id="playbackFrequencies"><br>
         <label>Tone duration (in seconds)</label>

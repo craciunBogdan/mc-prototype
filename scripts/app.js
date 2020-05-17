@@ -1,5 +1,7 @@
 // set up basic variables for app
 let recording = false;
+let recordedDataType = 'color';
+document.getElementById('recordedDataType').value = recordedDataType;
 let timeOfRecording = 0;
 let recordedValues = [];
 const canvas = document.querySelector('.visualizer');
@@ -8,15 +10,25 @@ let audioCtx = new AudioContext();
 
 // oscillator does the audio playback
 const oscillator = audioCtx.createOscillator();
-let playbackFrequencies = [1000, 1200, 1400]; // Hz
-let playbackDuration = 0.2; // seconds
+let playbackFrequencies = [1000, 2000, 2400, 22000, 1000]; // Hz
+let playbackDuration = 0.5; // seconds
 document.getElementById('playbackFrequencies').value = playbackFrequencies;
 document.getElementById('playbackDuration').value = playbackDuration;
 oscillator.type = 'square';
 oscillator.frequency.setValueAtTime(playbackFrequencies[0], audioCtx.currentTime);
 oscillator.start();
 
-let onFormSubmit = function () {
+let onFormRecordSubmit = function () {
+  let submittedDataType = document.getElementById('recordedDataType').value.toLowerCase();
+  if (submittedDataType.localeCompare('color') == 0 || submittedDataType.localeCompare('colour') == 0) {
+    recordedDataType = 'color';
+    console.log("Data type set to \'color\'");
+  } else {
+    console.log("Data type not recognized");
+  }
+}
+
+let onFormPlaybackSubmit = function () {
   playbackFrequencies = document.getElementById('playbackFrequencies').value.split(',').map(s => parseInt(s));
   playbackDuration = parseFloat(document.getElementById('playbackDuration').value);
   for (var i = 0; i < playbackFrequencies.length; i++) {
@@ -48,34 +60,89 @@ let onStartRecord = function () {
 
 let onStopRecord = function () {
   recording = false;
+  
   console.log(audioCtx.currentTime - timeOfRecording);
   console.log(recordedValues.length + " values recorded:\n" + recordedValues);
+  
   var realSampleRate = recordedValues.length / (audioCtx.currentTime - timeOfRecording);
-  var recordingDictionary = processRecording(recordedValues, realSampleRate);
+  var recordingMap = processRecording(recordedValues, realSampleRate);
   console.log("The following records represent the frequencies and the duration they were recorded for:");
-  console.log(recordingDictionary);
+  console.log("{");
+  for (let [freq, duration] of recordingMap) {
+    console.log(`${freq}: ${duration}`);
+  }
+  console.log("}")
+
+  processData(recordingMap, recordedDataType);
 }
 
+// Function that receives the recording and generates the frequencies it finds and
+// how long they were recorded for.
 let processRecording = function (recordedValues, realSampleRate) {
-  if (recordedValues < 1) {
-    return {};
-  }
-
-  var recordingDictionary = {};
+  var recordingMap = new Map();
   var counter = 1;
   
+  if (recordedValues.length < 1) {
+    return recordingMap;
+  }
+
   for (var i = 1; i < recordedValues.length; i++) {
-    if (recordedValues[i] < recordedValues[i - 1] + 100 &&
-      recordedValues[i] > recordedValues[i - 1] - 100) {
+    if (recordedValues[i] < recordedValues[i - 1] + 40 &&
+      recordedValues[i] > recordedValues[i - 1] - 40) {
         counter++;
     } else {
-      recordingDictionary[recordedValues[i - 1]] = counter / realSampleRate;
-      counter = 1;
+      if (recordingMap.has(recordedValues[i - 1])) {
+        recordingMap.set(recordedValues[i - 1] + 1, counter / realSampleRate);
+        counter = 1;
+      } else {
+        recordingMap.set(recordedValues[i - 1], counter / realSampleRate);
+        counter = 1;
+      }
     }
   }
-  recordingDictionary[recordedValues[recordedValues.length - 1]] = counter / realSampleRate;
+  if (recordingMap.has(recordedValues[recordedValues.length - 1])) {
+    recordingMap.set(recordedValues[recordedValues.length - 1] + 1);
+  } else {
+    recordingMap.set(recordedValues[recordedValues.length - 1], counter / realSampleRate);
+  }
+  
+  return recordingMap;
+}
 
-  return recordingDictionary;
+// Given the frequencies and the type of data, process the data and
+// generate the appropriate response.
+let processData = function (recordingMap, recordedDataType) {
+  var valid = false;
+  var data = [];
+
+  for (let [freq, duration] of recordingMap) {
+    if (((Math.round((freq - 1000) / 80)) === 0 ) && (duration >= 0.2) ) {
+      valid = !valid;
+    } else if (valid) {
+      data.push(Math.round((freq - 1000) / 80));
+    }
+  }
+
+  switch (recordedDataType) {
+    case 'color':
+      console.log(data);
+      processColor(data);
+      break;
+    default:
+      console.log("You shouldn't be here...");
+  }
+}
+
+// Process the data when the data type is color
+let processColor = function (data) {
+  console.log(data);
+  console.log(data.length);
+  if (data.length !== 3) {
+    console.log("Invalid color data. More than 3 values were provided.");
+  } else {
+    document.body.style.backgroundColor = `rgb(${data[0]}, ${data[1]}, ${data[2]}`;
+    console.log(`Received color:\nR:${data[0]}\nG:${data[1]}\nB:${data[2]}`);
+  }
 }
 
 //main block for doing the audio recording

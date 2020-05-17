@@ -10,3 +10,14 @@ As of right now, the prototype can only do the following:
 * Play a series of specified frequencies for a specified duration
 * Record a series of sounds and see what frequencies were played and for what duration (There is some leeway when it comes to what frequencies are the same. As long as there is a 50 Hz difference between 2 frequencies, they are considered one and the same).
 * Record the currently loudest frequency (kinda)
+* Receive a color through audio, decode it and turn the background of the page to that color. (Right now, it's buggy and generally pretty bad, but it kinda works)
+
+For now, we are only able to transmit a color as data. We are using the following protocol:
+
+    START TONE
+    CONTENT TONE
+    CONTENT TONE
+    CONTENT TONE
+    END TONE
+
+BOTH `START TONE` and `END TONE` are 1000 Hz in frequency. `CONTENT TONE` splits the range [1100 Hz, 24000 Hz] into 256 sub-ranges, each representing 1 byte, forming in this way a 3 byte hex code representing a color.
