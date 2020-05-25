@@ -23,12 +23,21 @@
 				<pre id="log"></pre>
       </div>
 
-      <form action="#" onsubmit="onFormRecordSubmit(); return false;" id="recordingForm">
-        <label>Recording data type</label>
-        <input type="text" id="recordedDataType"><br>
-        <input type="submit">
-      </form>
-
+      <table style="width:100%">
+        <tr>
+          <th>Recorded Color</th>
+          <th>Recorded Integer</th>
+          <th>Recorded String</th>
+        </tr>
+        <tr>
+          <td>
+            <div id="recordedColor"></div>
+          </td>
+          <td id='recordedInteger'></td>
+          <td id='recordedString'></td>
+        </tr>
+      </table>
+      
       <button type="button" onclick="onStartRecord()">Start Recording</button>
 
       <button type="button" onclick="onStopRecord()">Stop Recording</button>
@@ -36,10 +45,21 @@
       <br>
 
       <form action="#" onsubmit="onFormPlaybackSubmit(); return false;" id="frequencyForm">
-        <label>Tone frequencies (separated by ',')</label>
-        <input type="text" id="playbackFrequencies"><br>
+        <label><b>Data type </b>(ensure that this is the same both on the receiver, as well as the sender)</label>
+        <select id="dataType">
+          <option value="color">Color</option>
+          <option value="integer">Integer</option>
+          <option value="string">String</option>
+        </select><br>
+        <label>Value to transmit</label>
+        <input type="text" id="playbackValue" size=50><br>
+        <label>Tone byte values (separated by ',')</label>
+        <input type="text" id="playbackBytes" size=50 disabled="disabled"><br>
+        <label>Tone frequencies</label>
+        <input type="text" id="playbackFrequencies" size=50 disabled="disabled"><br>
         <label>Tone duration (in seconds)</label>
-        <input type="text" id="playbackDuration"><br>
+        <input type="text" id="playbackDuration" size=50><br>
+        <label><b>Don't forget to hit Submit!</b></label><br>
         <input type="submit">
       </form>
 
