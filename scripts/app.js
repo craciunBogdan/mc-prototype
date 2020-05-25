@@ -1,7 +1,81 @@
+// Helper functions and constants
+const MIN_FREQUENCY = 2000;
+const MAX_FREQUENCY = 20000;
+const TONES_NUMBER = 257;
+const MARK_BYTE = 256;
+const SEPARATOR_BYTE = -1;
+const FREQUENCY_RANGE = Math.floor((MAX_FREQUENCY - MIN_FREQUENCY) / TONES_NUMBER);
+
+let areSameFrequency = function (freq1, freq2) {
+  return (Math.floor((freq1 - MIN_FREQUENCY) / FREQUENCY_RANGE) === Math.floor((freq2 - MIN_FREQUENCY) / FREQUENCY_RANGE));
+}
+
+let frequencyToByte = function (freq) {
+  return (Math.floor((freq - MIN_FREQUENCY) / FREQUENCY_RANGE));
+}
+
+let isMarkTone = function (freq, duration) {
+  return (frequencyToByte(freq) === MARK_BYTE ) && (duration >= 0.1);
+}
+
+// We add FREQUENCY_RANGE / 2 instead of 
+// FREQUENCY_RANGE because in this way,
+// the frequency we produce is at the middle of the
+// range of frequencies that match to the given byte
+// instead of the lower end of the range.
+let byteToFrequency = function (value) {
+  return (value * FREQUENCY_RANGE + (MIN_FREQUENCY + Math.floor(FREQUENCY_RANGE / 2)));
+}
+
+let buildFrequencyArray = function (byteArray) {
+  var freqArray = byteArray.map(x => byteToFrequency(x));
+  // Insert mark tones at both ends of the array
+  freqArray.unshift(byteToFrequency(MARK_BYTE));
+  freqArray.push(byteToFrequency(MARK_BYTE));
+  // Insert separators between 2 equal frequencies 
+  for (var i = 0; i < freqArray.length - 1; i++) {
+    if (freqArray[i] === freqArray[i + 1]) {
+      freqArray.splice(i + 1, 0, byteToFrequency(SEPARATOR_BYTE));
+    }
+  }
+  return freqArray;
+}
+
+let intToByteArray = function (value) {
+  var byteArray = [0, 0, 0, 0];
+
+  for (var i = 0; i < byteArray.length; i++) {
+      var byte = value & 0xff;
+      byteArray[i] = byte;
+      value = (value - byte) / 256 ;
+  }
+
+  return byteArray;
+}
+
+let byteArrayToInt = function (byteArray) {
+  var value = 0;
+  
+  for (var i = byteArray.length - 1; i >= 0; i--) {
+      value = (value * 256) + byteArray[i];
+  }
+
+  return value;
+}
+
+let stringToByteArray = function (string) {
+  return string.split('').map(x => x.charCodeAt());
+}
+
+let byteArrayToString = function (byteArray) {
+  return byteArray.map(x => String.fromCharCode(x));
+}
+// Helper functions and constants END
+
 // set up basic variables for app
 let recording = false;
-let recordedDataType = 'color';
-document.getElementById('recordedDataType').value = recordedDataType;
+let dataType = 'color';
+document.getElementById('dataType').value = dataType;
 let timeOfRecording = 0;
 let recordedValues = [];
 const canvas = document.querySelector('.visualizer');
@@ -10,34 +84,52 @@ let audioCtx = new AudioContext();
 
 // oscillator does the audio playback
 const oscillator = audioCtx.createOscillator();
-let playbackFrequencies = [1000, 2000, 2400, 22000, 1000]; // Hz
+let playbackValue = [255, 0, 255];
+let playbackBytes = [255, 0, 255]; // byte values
+let playbackFrequencies = buildFrequencyArray(playbackBytes); // Hz
 let playbackDuration = 0.5; // seconds
+document.getElementById('playbackBytes').value = playbackBytes;
 document.getElementById('playbackFrequencies').value = playbackFrequencies;
 document.getElementById('playbackDuration').value = playbackDuration;
 oscillator.type = 'square';
 oscillator.frequency.setValueAtTime(playbackFrequencies[0], audioCtx.currentTime);
 oscillator.start();
 
-let onFormRecordSubmit = function () {
-  let submittedDataType = document.getElementById('recordedDataType').value.toLowerCase();
-  if (submittedDataType.localeCompare('color') == 0 || submittedDataType.localeCompare('colour') == 0) {
-    recordedDataType = 'color';
-    console.log("Data type set to \'color\'");
-  } else {
-    console.log("Data type not recognized");
-  }
-}
-
+// Form submit function
 let onFormPlaybackSubmit = function () {
-  playbackFrequencies = document.getElementById('playbackFrequencies').value.split(',').map(s => parseInt(s));
-  playbackDuration = parseFloat(document.getElementById('playbackDuration').value);
+  var e = document.getElementById('dataType');
+  dataType = e.options[e.selectedIndex].value;
+  console.log(`Data type set to ${dataType}`);
+
+  switch (dataType) {
+    case 'color':
+      playbackValue = document.getElementById('playbackValue').value.split(',').map(s => parseInt(s));
+      playbackBytes = playbackValue;
+      break;
+    case 'integer':
+      playbackValue = [parseInt(document.getElementById('playbackValue').value)];
+      playbackBytes = intToByteArray(playbackValue[0]);
+      break;
+    case 'string':
+      playbackValue = document.getElementById('playbackValue').value;
+      playbackBytes = stringToByteArray(playbackValue);
+      console.log("Not yet implemented.")
+  }
+  document.getElementById('playbackBytes').value = playbackBytes;
+  
+  playbackFrequencies = buildFrequencyArray(playbackBytes);
+  document.getElementById('playbackFrequencies').value = playbackFrequencies;
   for (var i = 0; i < playbackFrequencies.length; i++) {
     console.log("Audio playback frequency set to: " + playbackFrequencies[i]);
   }
+  
+  playbackDuration = parseFloat(document.getElementById('playbackDuration').value);
   console.log("Audio playback duration for each tone set to: " + playbackDuration + " seconds");
+  
   console.log("Audio ready.");
 }
 
+// Start audio playback button function
 let onStartAudio = function () {
   audioCtx.resume();
   currentTime = audioCtx.currentTime;
@@ -47,17 +139,20 @@ let onStartAudio = function () {
   oscillator.connect(audioCtx.destination);
 }
 
+// Stop audio playback button function
 let onStopAudio = function () {
   audioCtx.resume();
   oscillator.disconnect(audioCtx.destination);
 }
 
+// Start recording button function
 let onStartRecord = function () {
   timeOfRecording = audioCtx.currentTime;
   recordedValues = [];
   recording = true;
 }
 
+// Stop recording button function
 let onStopRecord = function () {
   recording = false;
   
@@ -68,12 +163,12 @@ let onStopRecord = function () {
   var recordingMap = processRecording(recordedValues, realSampleRate);
   console.log("The following records represent the frequencies and the duration they were recorded for:");
   console.log("{");
-  for (let [freq, duration] of recordingMap) {
-    console.log(`${freq}: ${duration}`);
+  for (let [index, data] of recordingMap) {
+    console.log(`${index}: ${data}`);
   }
-  console.log("}")
+  console.log("}");
 
-  processData(recordingMap, recordedDataType);
+  processData(recordingMap, dataType);
 }
 
 // Function that receives the recording and generates the frequencies it finds and
@@ -81,52 +176,53 @@ let onStopRecord = function () {
 let processRecording = function (recordedValues, realSampleRate) {
   var recordingMap = new Map();
   var counter = 1;
-  
+  var index = 0;
+
   if (recordedValues.length < 1) {
     return recordingMap;
   }
 
   for (var i = 1; i < recordedValues.length; i++) {
-    if (recordedValues[i] < recordedValues[i - 1] + 40 &&
-      recordedValues[i] > recordedValues[i - 1] - 40) {
-        counter++;
+    if ((i + 1 === recordedValues.length) || 
+        (!areSameFrequency(recordedValues[i], recordedValues[i + 1]))) {
+      recordingMap.set(index, [recordedValues[i], counter / realSampleRate]);
+      counter = 1;
+      index++;
     } else {
-      if (recordingMap.has(recordedValues[i - 1])) {
-        recordingMap.set(recordedValues[i - 1] + 1, counter / realSampleRate);
-        counter = 1;
-      } else {
-        recordingMap.set(recordedValues[i - 1], counter / realSampleRate);
-        counter = 1;
-      }
+      counter++;
     }
   }
-  if (recordingMap.has(recordedValues[recordedValues.length - 1])) {
-    recordingMap.set(recordedValues[recordedValues.length - 1] + 1);
-  } else {
-    recordingMap.set(recordedValues[recordedValues.length - 1], counter / realSampleRate);
-  }
-  
+
   return recordingMap;
 }
 
 // Given the frequencies and the type of data, process the data and
 // generate the appropriate response.
-let processData = function (recordingMap, recordedDataType) {
+let processData = function (recordingMap, dataType) {
   var valid = false;
   var data = [];
 
-  for (let [freq, duration] of recordingMap) {
-    if (((Math.round((freq - 1000) / 80)) === 0 ) && (duration >= 0.2) ) {
+  for (let [_, [freq, duration]] of recordingMap) {
+    if (isMarkTone(freq, duration)) {
       valid = !valid;
     } else if (valid) {
-      data.push(Math.round((freq - 1000) / 80));
+      // Check if the current tone is a separator tone
+      var byteValue = frequencyToByte(freq);
+      if (byteValue !== -1) {
+        data.push(frequencyToByte(freq));
+      }
     }
   }
 
-  switch (recordedDataType) {
+  switch (dataType) {
     case 'color':
-      console.log(data);
       processColor(data);
+      break;
+    case 'integer':
+      processInteger(data);
+      break;
+    case 'string':
+      processString(data);
       break;
     default:
       console.log("You shouldn't be here...");
@@ -138,11 +234,33 @@ let processColor = function (data) {
   console.log(data);
   console.log(data.length);
   if (data.length !== 3) {
-    console.log("Invalid color data. More than 3 values were provided.");
+    console.log("Invalid color data. More or less than 3 values were received.");
   } else {
-    document.body.style.backgroundColor = `rgb(${data[0]}, ${data[1]}, ${data[2]}`;
+    document.getElementById('recordedColor').style.background = `rgb(${data[0]}, ${data[1]}, ${data[2]})`;
     console.log(`Received color:\nR:${data[0]}\nG:${data[1]}\nB:${data[2]}`);
   }
+}
+
+// Process the data when the data type is integer
+let processInteger = function (data) {
+  console.log(data);
+  console.log(data.length);
+  if (data.length !== 4) {
+    console.log("Invalid integer data. More or less than 4 values were received.");
+  } else {
+    var value = byteArrayToInt(data);
+    document.getElementById('recordedInteger').innerHTML = value;
+    console.log(`Received integer: ${value}`);
+  }
+}
+
+// Process the data when the data type is string
+let processString = function (data) {
+  console.log(data);
+  console.log(data.length);
+  var string = byteArrayToString(data);
+  document.getElementById('recordedString').innerHTML = string.join('');
+  console.log(`Received string: ${string}`);
 }
 
 //main block for doing the audio recording
@@ -206,7 +324,9 @@ function visualize(stream) {
     document.getElementById('maxFrequency').innerHTML = maxFrequency;
 
     // This is probably the worst way to do this.
-    if (recording) {
+    // We check that it is greater than 950 in order
+    // to get rid of some noise.
+    if (recording && loudestFrequency > byteToFrequency(-2)) {
       recordedValues.push(loudestFrequency);
     }
 
