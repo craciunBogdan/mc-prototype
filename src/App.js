@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import logo from './logo.svg';
 import './App.css';
-import { buildFrequencyArray, intToByteArray, stringToByteArray, areSameFrequency, isMarkTone, frequencyToByte, byteArrayToInt, byteArrayToString, byteToFrequency } from './utils';
+import { buildFrequencyArray, intToByteArray, stringToByteArray, areSameFrequency, isMarkTone, frequencyToByte, byteArrayToInt, byteArrayToString, byteToFrequency, createOscillator } from './utils';
 
 function App() {
   // State items
   const [dataType, setDataType] = useState('color');
-  const [playbackValue, setPlaybackValue] = useState([255, 0, 255]);
-  const [playbackBytes, setPlaybackBytes] = useState([255, 0, 255]);
+  const [isPlayingBack, setIsPlayingBack] = useState(false);
+  const [playbackValue, setPlaybackValue] = useState([1, 0, 1]);
+  const [playbackBytes, setPlaybackBytes] = useState([1, 0, 1]);
   const [playbackFrequencies, setPlaybackFrequencies] = useState(buildFrequencyArray(playbackBytes)); // Hz
   const [playbackDuration, setPlaybackDuration] = useState(0.5); // seconds
   const [recording, setRecording] = useState(false);
@@ -17,12 +18,10 @@ function App() {
   let canvas = undefined;
   let canvasCtx = undefined;
 
-  const audioCtx = new AudioContext();
-
-  const oscillator = audioCtx.createOscillator();
-  oscillator.type = 'square';
-  oscillator.frequency.setValueAtTime(playbackFrequencies[0], audioCtx.currentTime);
-  oscillator.start();
+  // TODO maybe not as clean as I thought
+  const [audioCtx, oscillator] = createOscillator(playbackFrequencies[0], () => {
+    setIsPlayingBack(false);
+  });
 
   useEffect(() => {
     window.onresize = () => {
@@ -31,8 +30,11 @@ function App() {
   });
 
   // Form submit function
-  const onFormPlaybackSubmit = () => {
+  const onFormPlaybackSubmit = (event) => {
     console.log(`Data type set to ${dataType}`);
+
+    // Don't refresh the page please
+    event.preventDefault();
 
     switch (dataType) {
       case 'color':
@@ -52,7 +54,7 @@ function App() {
       console.log("Audio playback frequency set to: " + playbackFrequencies[i]);
     }
     
-    playbackDuration = parseFloat(document.getElementById('playbackDuration').value);
+    setPlaybackDuration(parseFloat(document.getElementById('playbackDuration').value));
     console.log("Audio playback duration for each tone set to: " + playbackDuration + " seconds");
     
     console.log("Audio ready.");
@@ -62,10 +64,14 @@ function App() {
   let onStartAudio = function () {
     audioCtx.resume();
     const currentTime = audioCtx.currentTime;
-    for (var i = 0; i < playbackFrequencies.length; i++) {
-      oscillator.frequency.setValueAtTime(playbackFrequencies[i], currentTime + (i * playbackDuration));
-    }
+
+    playbackFrequencies.forEach((item, index) => {
+      oscillator.frequency.setValueAtTime(item, currentTime + (index * playbackDuration));
+    });
+
     oscillator.connect(audioCtx.destination);
+
+    setIsPlayingBack(true);
   }
 
   // Stop audio playback button function
@@ -296,6 +302,11 @@ function App() {
 
   // Inputs reactions
   const setCanvas = (ref) => {
+    // No need to use on every state update
+    if (canvas) {
+      return;
+    }
+
     canvas = ref;
     canvasCtx = canvas.getContext("2d");
     canvas.width = window.innerWidth;
@@ -343,13 +354,13 @@ function App() {
         </tr>
       </table>
       
-      <button type="button" onclick="onStartRecord()">Start Recording</button>
+      <button type="button" onClick={onStartRecord}>Start Recording</button>
 
-      <button type="button" onclick="onStopRecord()">Stop Recording</button>
+      <button type="button" onClick={onStopRecord}>Stop Recording</button>
 
       <br></br>
 
-      <form onSubmit={onFormPlaybackSubmit} id="frequencyForm">
+      <form id="frequencyForm">
         <label><b>Data type </b>(ensure that this is the same both on the receiver, as well as the sender)</label>
         <select id="dataType" value={dataType} onChange={onDataTypeSelectChanged}>
           <option value="color">Color</option>
@@ -365,12 +376,12 @@ function App() {
         <label>Tone duration (in seconds)</label>
         <input type="text" id="playbackDuration" size="50" value={playbackDuration} onChange={onPlaybackDurationInputChanged}></input><br></br>
         <label><b>Don't forget to hit Submit!</b></label><br></br>
-        <input type="submit"></input>
+        <input type="submit" onClick={onFormPlaybackSubmit}></input>
       </form>
 
-      <button type="button" onclick="onStartAudio()">Start Audio Playback</button>
+      <button type="button" onClick={onStartAudio}>Start Audio Playback</button>
 
-      <button type="button" onclick="onStopAudio()">Stop Audio Playback</button>
+      <button type="button" onClick={onStopAudio} disabled={!isPlayingBack}>Stop Audio Playback</button>
 
       <table style={{width: '100%' }}>
         <tr>

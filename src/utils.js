@@ -7,15 +7,15 @@ export const SEPARATOR_BYTE = -1;
 
 export const areSameFrequency = (freq1, freq2) => {
     return (Math.floor((freq1 - MIN_FREQUENCY) / FREQUENCY_RANGE) === Math.floor((freq2 - MIN_FREQUENCY) / FREQUENCY_RANGE));
-}
+};
 
 export const frequencyToByte = (freq) => {
     return (Math.floor((freq - MIN_FREQUENCY) / FREQUENCY_RANGE));
-}
+};
 
 export const isMarkTone = (freq, duration) => {
     return (frequencyToByte(freq) === MARK_BYTE) && (duration >= 0.1);
-}
+};
 
 // We add FREQUENCY_RANGE / 2 instead of 
 // FREQUENCY_RANGE because in this way,
@@ -24,7 +24,7 @@ export const isMarkTone = (freq, duration) => {
 // instead of the lower end of the range.
 export const byteToFrequency = (value) => {
     return (value * FREQUENCY_RANGE + (MIN_FREQUENCY + Math.floor(FREQUENCY_RANGE / 2)));
-}
+};
 
 export const buildFrequencyArray = (byteArray) => {
     var freqArray = byteArray.map(x => byteToFrequency(x));
@@ -38,7 +38,7 @@ export const buildFrequencyArray = (byteArray) => {
         }
     }
     return freqArray;
-}
+};
 
 export const intToByteArray = (value) => {
     var byteArray = [0, 0, 0, 0];
@@ -50,7 +50,7 @@ export const intToByteArray = (value) => {
     }
 
     return byteArray;
-}
+};
 
 export const byteArrayToInt = (byteArray) => {
     var value = 0;
@@ -60,12 +60,26 @@ export const byteArrayToInt = (byteArray) => {
     }
 
     return value;
-}
+};
 
 export const stringToByteArray = (string) => {
+    console.log(string);
     return string.split('').map(x => x.charCodeAt());
-}
+};
 
 export const byteArrayToString = (byteArray) => {
     return byteArray.map(x => String.fromCharCode(x));
-}
+};
+
+export const createOscillator = (firstValue, onEnded) => {
+    const audioCtx = new AudioContext();
+
+    const oscillator = audioCtx.createOscillator();
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(firstValue, audioCtx.currentTime);
+    oscillator.start();
+
+    oscillator.onended = onEnded;
+
+    return [audioCtx, oscillator];
+};
