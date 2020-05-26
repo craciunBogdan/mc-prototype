@@ -2,6 +2,13 @@
 
 ## Setup
 
+Run `npm install` before running the project.
+This will ensure you have all the dependencies to enjoy the app.
+
+## Running
+
+### Desktop only
+Run `npm start`. This will start the react app on (localhost:3000)[http://localhost:3000]
 In order to run this on mobile devices, you need to run it using TLS. Otherwise, `AudioContext` will not work.
 One way of doing this is to use `live-server-https`. In order to set this up, follow these steps:
 1. If you don't have `live-server` installed, run `npm install -g live-server`.
