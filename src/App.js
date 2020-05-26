@@ -26,9 +26,7 @@ function App() {
 
   useEffect(() => {
     window.onresize = () => {
-      // TODO probably not gonna work
-      const mainSection = document.querySelector('.main-controls');
-      canvas.width = mainSection.offsetWidth;
+      canvas.width = window.innerWidth;
     }
   });
 
@@ -300,6 +298,7 @@ function App() {
   const setCanvas = (ref) => {
     canvas = ref;
     canvasCtx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
 
     startAudioRecording();
   }
