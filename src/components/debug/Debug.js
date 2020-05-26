@@ -14,8 +14,9 @@ function Debug() {
   const [recordedValues, setRecorededValues] = useState([]);
   const [timeOfRecording, setTimeOfRecording] = useState(0);
 
-  let canvas = undefined;
-  let canvasCtx = undefined;
+  let canvas = null;
+  let canvasCtx = null;
+  let canvasRequestAnimationFrameId = null;
 
   // TODO maybe not as clean as I thought
   const [audioCtx, oscillator] = createOscillator(playbackFrequencies[0], () => {
@@ -25,6 +26,16 @@ function Debug() {
   useEffect(() => {
     window.onresize = () => {
       canvas.width = window.innerWidth;
+    }
+  });
+
+  // Cleanup
+  useEffect(() => () => {
+    console.log('cleaning up');
+
+    // Clean animation frame requests
+    if (canvasRequestAnimationFrameId) {
+      cancelAnimationFrame(canvasRequestAnimationFrameId);
     }
   });
 
@@ -242,7 +253,7 @@ function Debug() {
 
       //Run draw() about 60 times/second -> we put it here so it gets
       // called again the next time
-      requestAnimationFrame(draw);
+      canvasRequestAnimationFrameId = requestAnimationFrame(draw);
     
       analyser.getByteFrequencyData(dataArray);   //Get FFT
       // analyser.getByteTimeDomainData(dataArray);    //Get waveform
