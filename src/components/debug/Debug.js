@@ -17,6 +17,7 @@ function Debug() {
   let canvas = null;
   let canvasCtx = null;
   let canvasRequestAnimationFrameId = null;
+  let mediaRecorder = null;
 
   // TODO maybe not as clean as I thought
   const [audioCtx, oscillator] = createOscillator(playbackFrequencies[0], () => {
@@ -33,9 +34,16 @@ function Debug() {
   useEffect(() => () => {
     console.log('cleaning up');
 
-    // Clean animation frame requests
+    // Clear animation frame requests
     if (canvasRequestAnimationFrameId) {
       cancelAnimationFrame(canvasRequestAnimationFrameId);
+    }
+
+    // Clear audio recording
+    if (mediaRecorder) {
+      mediaRecorder.getTracks().forEach(function(track) {
+        track.stop();
+      });
     }
   });
 
@@ -214,7 +222,8 @@ function Debug() {
       const constraints = { audio: true };
   
       let onSuccess = function (stream) {
-        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder = stream;
         visualize(stream);
       }
   
