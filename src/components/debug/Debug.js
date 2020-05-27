@@ -6,7 +6,7 @@ function Debug() {
   // State items
   const [dataType, setDataType] = useState('color');
   const [isPlayingBack, setIsPlayingBack] = useState(false);
-  const [playbackValue, setPlaybackValue] = useState([1, 0, 1]);
+  const [playbackValue, setPlaybackValue] = useState('1,0,1');
   const [playbackBytes, setPlaybackBytes] = useState([1, 0, 1]);
   const [playbackFrequencies, setPlaybackFrequencies] = useState(buildFrequencyArray(playbackBytes)); // Hz
   const [playbackDuration, setPlaybackDuration] = useState(0.5); // seconds
@@ -45,7 +45,7 @@ function Debug() {
         track.stop();
       });
     }
-  });
+  }, []);
 
   // Form submit function
   const onFormPlaybackSubmit = (event) => {
@@ -54,25 +54,28 @@ function Debug() {
     // Don't refresh the page please
     event.preventDefault();
 
+    let futurePlaybackBytes = null;
+
     switch (dataType) {
       case 'color':
-        setPlaybackBytes(playbackValue.split(',').map(s => parseInt(s)));
+        futurePlaybackBytes = playbackValue.split(',').map(s => parseInt(s));
         break;
       case 'integer':
-        setPlaybackBytes(intToByteArray([parseInt(playbackValue)][0]));
+        futurePlaybackBytes = intToByteArray([parseInt(playbackValue)][0]);
         break;
       case 'string':
-        setPlaybackBytes(stringToByteArray(playbackValue));
+        futurePlaybackBytes = stringToByteArray(playbackValue);
         console.warn("Not yet implemented.")
     }
     
-    setPlaybackFrequencies(buildFrequencyArray(playbackBytes));
+    setPlaybackBytes(futurePlaybackBytes);
+    setPlaybackFrequencies(buildFrequencyArray(futurePlaybackBytes));
 
     for (var i = 0; i < playbackFrequencies.length; i++) {
       console.log("Audio playback frequency set to: " + playbackFrequencies[i]);
     }
     
-    setPlaybackDuration(parseFloat(document.getElementById('playbackDuration').value));
+    setPlaybackDuration(parseFloat(playbackDuration));
     console.log("Audio playback duration for each tone set to: " + playbackDuration + " seconds");
     
     console.log("Audio ready.");
@@ -332,6 +335,7 @@ function Debug() {
 
     startAudioRecording();
   }
+
   const onDataTypeSelectChanged = (event) => {
     setDataType(event.target.value);
   }
