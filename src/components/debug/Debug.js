@@ -21,6 +21,7 @@ function Debug() {
 
   // TODO maybe not as clean as I thought
   const [audioCtx, oscillator] = createOscillator(playbackFrequencies[0], () => {
+    console.log('stopped playing');
     setIsPlayingBack(false);
   });
 
@@ -85,12 +86,20 @@ function Debug() {
   let onStartAudio = function () {
     audioCtx.resume();
     const currentTime = audioCtx.currentTime;
+    let endTime = null;
 
     playbackFrequencies.forEach((item, index) => {
       oscillator.frequency.setValueAtTime(item, currentTime + (index * playbackDuration));
+
+      if (index === playbackFrequencies.length - 1) {
+        endTime = currentTime + (playbackFrequencies.length * playbackDuration);
+      }
     });
 
     oscillator.connect(audioCtx.destination);
+
+    oscillator.start(currentTime);
+    oscillator.stop(endTime);
 
     setIsPlayingBack(true);
   }
@@ -98,7 +107,7 @@ function Debug() {
   // Stop audio playback button function
   let onStopAudio = () => {
     audioCtx.resume();
-    oscillator.disconnect(audioCtx.destination);
+    oscillator.stop();
   }
 
   // Start recording button function

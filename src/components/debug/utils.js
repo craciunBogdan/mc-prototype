@@ -77,8 +77,7 @@ export const createOscillator = (firstValue, onEnded) => {
     const oscillator = audioCtx.createOscillator();
     oscillator.type = 'square';
     oscillator.frequency.setValueAtTime(firstValue, audioCtx.currentTime);
-    oscillator.start();
-
+    
     oscillator.onended = onEnded;
 
     return [audioCtx, oscillator];
