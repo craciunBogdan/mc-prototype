@@ -1,9 +1,13 @@
 export const MIN_FREQUENCY = 2000;
-export const MAX_FREQUENCY = 20000;
-export const TONES_NUMBER = 257;
-export const MARK_BYTE = 256;
-export const FREQUENCY_RANGE = Math.floor((MAX_FREQUENCY - MIN_FREQUENCY) / TONES_NUMBER);
+export const MAX_FREQUENCY = 4960;
+export const TONES_NUMBER = 17;
+export const RESPONSE_MARK_BYTE = 16;
+export const REQUEST_MARK_BYTE = -2;
 export const SEPARATOR_BYTE = -1;
+export const REQUEST_COLOR_BYTE = 0;
+export const REQUEST_INT_BYTE = 7;
+export const REQUEST_STR_BYTE = 15;
+export const FREQUENCY_RANGE = Math.floor((MAX_FREQUENCY - MIN_FREQUENCY) / TONES_NUMBER);
 
 export const areSameFrequency = (freq1, freq2) => {
     return (Math.floor((freq1 - MIN_FREQUENCY) / FREQUENCY_RANGE) === Math.floor((freq2 - MIN_FREQUENCY) / FREQUENCY_RANGE));
@@ -13,9 +17,13 @@ export const frequencyToByte = (freq) => {
     return (Math.floor((freq - MIN_FREQUENCY) / FREQUENCY_RANGE));
 };
 
-export const isMarkTone = (freq, duration) => {
-    return (frequencyToByte(freq) === MARK_BYTE) && (duration >= 0.1);
+export const isRequestMarkTone = (freq, duration) => {
+    return (frequencyToByte(freq) === REQUEST_MARK_BYTE) && (duration >= 0.1);
 };
+
+export const isResponseMarkTone = (freq, duration) => {
+    return (frequencyToByte(freq) === RESPONSE_MARK_BYTE) && (duration >= 0.1);
+}
 
 // We add FREQUENCY_RANGE / 2 instead of 
 // FREQUENCY_RANGE because in this way,
@@ -26,11 +34,21 @@ export const byteToFrequency = (value) => {
     return (value * FREQUENCY_RANGE + (MIN_FREQUENCY + Math.floor(FREQUENCY_RANGE / 2)));
 };
 
-export const buildFrequencyArray = (byteArray) => {
+export const buildFrequencyArray = (byteArray, type) => {
     var freqArray = byteArray.map(x => byteToFrequency(x));
     // Insert mark tones at both ends of the array
-    freqArray.unshift(byteToFrequency(MARK_BYTE));
-    freqArray.push(byteToFrequency(MARK_BYTE));
+    switch (type) {
+        case 'response':
+            freqArray.unshift(byteToFrequency(RESPONSE_MARK_BYTE));
+            freqArray.push(byteToFrequency(RESPONSE_MARK_BYTE));
+            break;
+        case 'request':
+            freqArray.unshift(byteToFrequency(REQUEST_MARK_BYTE));
+            freqArray.push(byteToFrequency(REQUEST_MARK_BYTE));
+            break;
+        default:
+            console.error("Unrecognised message type: " + type);
+    }
     // Insert separators between 2 equal frequencies 
     for (var i = 0; i < freqArray.length - 1; i++) {
         if (freqArray[i] === freqArray[i + 1]) {
@@ -40,45 +58,122 @@ export const buildFrequencyArray = (byteArray) => {
     return freqArray;
 };
 
+export const buildColorRequestArray = () => {
+    return [REQUEST_COLOR_BYTE];
+};
+
+export const buildIntegerRequestArray = () => {
+    return [REQUEST_INT_BYTE];
+};
+
+export const buildStringRequestArray = () => {
+    return [REQUEST_STR_BYTE];
+};
+
+export const checkRequestType = (byteArray) => {
+    if (byteArray.length > 1) {
+        console.error("Unexpected number of frequencies in request message: " + byteArray.length);
+        return 'undefined';
+    }
+
+    switch (byteArray[0]) {
+        case REQUEST_COLOR_BYTE:
+            return 'color';
+        case REQUEST_INT_BYTE:
+            return 'integer';
+        case REQUEST_STR_BYTE:
+            return 'string';
+        default:
+            console.error("Unrecognized frequency in request message: " + byteArray[1]
+             + "\nCorresponding byte value: " + frequencyToByte(byteArray[1]));
+            return 'undefined';
+    }
+};
+
+export const colorToByteArray = (color) => {
+    return concatenateAllSubarrays(color.map(x => byteToNibbleArray(x)));
+}
+
+export const byteArrayToColor = (byteArray) => {
+    var chunkedColor = chunk(byteArray);
+    return chunkedColor.map(n => nibbleArrayToInt(n));
+}
+
 export const intToByteArray = (value) => {
-    var byteArray = [0, 0, 0, 0];
+    var byteArray = [0, 0, 0, 0, 0, 0, 0, 0];
 
     for (var i = 0; i < byteArray.length; i++) {
-        var byte = value & 0xff;
+        var byte = value & 0xf;
         byteArray[i] = byte;
-        value = (value - byte) / 256;
+        value = (value - byte) / 16;
     }
 
     return byteArray;
 };
 
 export const byteArrayToInt = (byteArray) => {
-    var value = 0;
-
-    for (var i = byteArray.length - 1; i >= 0; i--) {
-        value = (value * 256) + byteArray[i];
-    }
-
-    return value;
+    return nibbleArrayToInt(byteArray);
 };
 
 export const stringToByteArray = (string) => {
-    console.log(string);
-    return string.split('').map(x => x.charCodeAt());
+    return concatenateAllSubarrays(string.split('').map(x => byteToNibbleArray(x.charCodeAt())));
 };
 
 export const byteArrayToString = (byteArray) => {
-    return byteArray.map(x => String.fromCharCode(x));
+    var chunkArray = chunk(byteArray);
+    return chunkArray.map(x => String.fromCharCode(nibbleArrayToInt(x)));
 };
 
-export const createOscillator = (firstValue, onEnded) => {
-    const audioCtx = new AudioContext();
-
+export const createOscillator = (audioCtx, firstValue, onEnded) => {
     const oscillator = audioCtx.createOscillator();
     oscillator.type = 'square';
     oscillator.frequency.setValueAtTime(firstValue, audioCtx.currentTime);
-    
     oscillator.onended = onEnded;
-
-    return [audioCtx, oscillator];
+    // oscillator.start();
+    return oscillator;
 };
+
+let byteToNibbleArray = (value) => {
+    var nibbleArray = [0, 0];
+
+    for (var i = 0; i < nibbleArray.length; i++) {
+        var nibble = value & 0xf;
+        nibbleArray[i] = nibble;
+        value = (value - nibble) / 16;
+    }
+
+    return nibbleArray;
+}
+
+let nibbleArrayToInt = (nibbleArray) => {
+    var value = 0;
+
+    for (var i = nibbleArray.length - 1; i >= 0; i--) {
+        value = (value * 16) + nibbleArray[i];
+    }
+
+    return value;
+}
+
+let chunk = (array) => {
+    if (!array.length) {
+      return [];
+    }
+    var chunkSize = 2;
+    var i, j, t, chunks = [];
+    for (i = 0, j = array.length; i < j; i += chunkSize) {
+      t = array.slice(i, i + chunkSize);
+      chunks.push(t);
+    }
+    return chunks;
+  };
+
+let concatenateAllSubarrays = (array) => {
+    let result = [];
+
+    for (var i = 0; i < array.length; i++) {
+        result = result.concat(array[i]);
+    }
+
+    return result;
+}
