@@ -23,7 +23,7 @@ if (process.argv.includes('--https')) {
     spawnSync(startCommand, {
         cwd: webappPath,
         stdio: 'inherit',
-        shell:true
+        shell: process.platform === 'win32' ? 'powershell.exe' : true // Types? What are types?
     });
 } else {
     spawnSync(npm, ['start'], {
