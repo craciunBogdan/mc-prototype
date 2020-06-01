@@ -1,24 +1,15 @@
 import React, { Component } from 'react';
 import './Debug.css';
-import { buildFrequencyArray, checkRequestType, buildColorRequestArray, buildIntegerRequestArray, buildStringRequestArray, colorToByteArray, intToByteArray, stringToByteArray, areSameFrequency, isRequestMarkTone, isResponseMarkTone, frequencyToByte, byteArrayToColor, byteArrayToInt, byteArrayToString, byteToFrequency, createOscillator } from './utils';
+import { buildFrequencyArray, buildColorRequestArray, buildIntegerRequestArray, buildStringRequestArray, byteToFrequency } from '../common/audio-utils';
+import AudioTransmitter from '../common/audio-transmitter';
 
 export default class Debug extends Component {
   constructor(props) {
     super(props);
 
-    const playbackBytes = colorToByteArray([255, 0, 255]);
     this.state = {
-      audioCtx: new AudioContext(),
-      dataType: 'color',
-      isPlayingBack: false,
-      oscillator: null,
-      playbackValue: '255, 0, 255',
-      playbackBytes,
-      playbackFrequencies: buildFrequencyArray(playbackBytes, 'response'), // Hz
-      playbackDuration: 0.5, // seconds
-      recording: false,
-      recordedValues: [],
-      timeOfRecording: 0,
+      audioTransmitter: new AudioTransmitter(),
+      lastRecordedColor: '#ffffff'
     }
 
     this.canvas = null;
@@ -29,7 +20,7 @@ export default class Debug extends Component {
     window.onresize = () => {
       if (this.canvas) {
         this.canvas.width = window.innerWidth;
-      } 
+      }
     }
   }
 
@@ -49,45 +40,8 @@ export default class Debug extends Component {
     }
   }
 
-  // Form submit function
-  onFormPlaybackSubmit = (event) => {
-    const { dataType, playbackDuration, playbackValue } = this.state;
-
-    console.log(`Data type set to ${dataType}`);
-
-    // Don't refresh the page please
-    event.preventDefault();
-
-    let futurePlaybackBytes = null;
-
-    switch (dataType) {
-      case 'color':
-        futurePlaybackBytes = colorToByteArray(playbackValue.split(',').map(s => parseInt(s)));
-        break;
-      case 'integer':
-        futurePlaybackBytes = intToByteArray([parseInt(playbackValue)][0]);
-        break;
-      case 'string':
-        futurePlaybackBytes = stringToByteArray(playbackValue);
-        break;
-      default:
-        console.error("Undefined data type provide: " + dataType);
-    }
-
-    this.setState({
-      playbackBytes: futurePlaybackBytes,
-      playbackDuration: parseFloat(playbackDuration),
-      playbackFrequencies: buildFrequencyArray(futurePlaybackBytes, 'response')
-    }, () => {
-      const { playbackDuration, playbackFrequencies } = this.state; // Shadowing :(
-      for (let i = 0; i < playbackFrequencies.length; i++) {
-        console.log("Audio playback frequency set to: " + playbackFrequencies[i]);
-      }
-
-      console.log("Audio playback duration for each tone set to: " + playbackDuration + " seconds");
-
-      console.log("Audio ready.");
-    });
+  updateAudioTransmitter = (audioTransmitter) => {
+    this.setState({ audioTransmitter });
   }
 
   onGenerateColorRequest = () => {
@@ -122,200 +76,39 @@ export default class Debug extends Component {
 
   // Start audio playback button function
   onStartAudio = () => {
-    const { audioCtx, playbackFrequencies, playbackDuration } = this.state;
+    const { audioTransmitter } = this.state;
+    audioTransmitter.startPlaying();
 
-    const oscillator = createOscillator(audioCtx, playbackFrequencies[0], () => {
-      console.log('stopped playing');
-      this.setState({
-        isPlayingBack: false
-      });
-    });
-
-    this.setState({
-      oscillator,
-      isPlayingBack: true
-    }, () => {
-      const { oscillator } = this.state;  // Shadowing :(
-
-      audioCtx.resume();
-      const currentTime = audioCtx.currentTime;
-      const endTime = currentTime + (playbackFrequencies.length * playbackDuration);
-
-      playbackFrequencies.forEach((item, index) => {
-        oscillator.frequency.setValueAtTime(item, currentTime + (index * playbackDuration));
-      });
-
-      oscillator.connect(audioCtx.destination);
-      oscillator.start(currentTime)
-      oscillator.stop(endTime);
-
-      console.log('state changed, started playing audio');
-
-      console.log(oscillator);
-    })
+    this.updateAudioTransmitter(audioTransmitter);
   }
 
   // Stop audio playback button function
   onStopAudio = () => {
-    const { oscillator } = this.state;
+    const { audioTransmitter } = this.state;
+    audioTransmitter.stopPlaying();
 
-    oscillator.stop(0);
-
-    this.setState({
-      isPlayingBack: false
-    });
+    this.updateAudioTransmitter(audioTransmitter);
   }
 
   // Start recording button function
   onStartRecord = () => {
-    const { audioCtx } = this.state;
-    this.setState({
-      recordedValues: [],
-      recording: true,
-      timeOfRecording: audioCtx.currentTime
-    }, () => { console.log('started recording')});
+    const { audioTransmitter } = this.state;
+    audioTransmitter.startRecording();
+
+    this.updateAudioTransmitter(audioTransmitter);
   }
 
   // Stop recording button function
   onStopRecord = () => {
-    const { audioCtx, dataType, recordedValues, timeOfRecording } = this.state;
+    const { audioTransmitter } = this.state;
+    audioTransmitter.stopRecording();
 
-    console.log(audioCtx.currentTime - timeOfRecording);
-    console.log(recordedValues.length + " values recorded:\n" + recordedValues);
-
-    var realSampleRate = recordedValues.length / (audioCtx.currentTime - timeOfRecording);
-    var recordingMap = this.processRecording(recordedValues, realSampleRate);
-    console.log("The following records represent the frequencies and the duration they were recorded for:");
-    console.log("{");
-    for (let [index, data] of recordingMap) {
-      console.log(`${index}: ${data}`);
-    }
-    console.log("}");
-
-    this.processData(recordingMap, dataType);
-
-    this.setState({
-      recording: false
-    });
-  }
-
-  // Function that receives the recording and generates the frequencies it finds and
-  // how long they were recorded for.
-  processRecording = (recValues, realSampleRate) => {
-    var recordingMap = new Map();
-    var counter = 1;
-    var index = 0;
-
-    if (recValues.length < 1) {
-      return recordingMap;
-    }
-
-    for (var i = 1; i < recValues.length; i++) {
-      if ((i + 1 === recValues.length) ||
-        (!areSameFrequency(recValues[i], recValues[i + 1]))) {
-        recordingMap.set(index, [recValues[i], counter / realSampleRate]);
-        counter = 1;
-        index++;
-      } else {
-        counter++;
-      }
-    }
-
-    return recordingMap;
-  }
-
-  // Given the frequencies and the type of data, process the data and
-  // generate the appropriate response.
-  processData = (recordingMap, dt) => {
-    var valid = false;
-    var messageType = null;
-    var data = [];
-
-    for (let [, [freq, duration]] of recordingMap) {
-      if (isRequestMarkTone(freq, duration)) {
-        valid = !valid;
-        messageType = 'request';
-      } else if (isResponseMarkTone(freq, duration)) {
-        valid = !valid;
-        messageType = 'response';
-      } else if (valid) {
-        // Check if the current tone is a separator tone
-        var byteValue = frequencyToByte(freq);
-        if ((byteValue !== -1) && (duration >= 0.3)) {
-          data.push(frequencyToByte(freq));
-        }
-      }
-    }
-
-    switch (messageType) {
-      case 'request':
-        var requestType = checkRequestType(data);
-        if (requestType === 'undefined') {
-          console.log("The received request did not comply with protocol. Check error to see what the problem was.");
-        } else {
-          console.log("Received request for " + requestType + " data.");
-          this.setState({
-            dataType: requestType
-          });
-        }
-        break;
-      case 'response':
-        switch (dt) {
-          case 'color':
-            this.processColor(data);
-            break;
-          case 'integer':
-            this.processInteger(data);
-            break;
-          case 'string':
-            this.processString(data);
-            break;
-          default:
-            console.error("Undefined data type in response: " + dt);
-        }
-        break;
-      default:
-        console.error("Undefined message type: " + messageType);
-    }
-  }
-
-  // Process the data when the data type is color
-  processColor = (data) => {
-    console.log(data);
-    if (data.length !== 6) {
-      console.log("Unexpected number of values were received: " + data.length + "\nExpected 6");
-    } else {
-      var value = byteArrayToColor(data);
-      console.log(value);
-      document.getElementById('recordedColor').style.background = `rgb(${value[0]}, ${value[1]}, ${value[2]})`;
-      console.log(`Received color:\nR:${value[0]}\nG:${value[1]}\nB:${value[2]}`);
-    }
-  }
-
-  // Process the data when the data type is integer
-  processInteger = (data) => {
-    console.log(data);
-    console.log(data.length);
-    if (data.length !== 8) {
-      console.log("Unexpected number of values were received: " + data.length + "\nExpected 8.");
-    } else {
-      var value = byteArrayToInt(data);
-      document.getElementById('recordedInteger').innerHTML = value;
-      console.log(`Received integer: ${value}`);
-    }
-  }
-
-  // Process the data when the data type is string
-  processString = (data) => {
-    console.log(data);
-    console.log(data.length);
-    var string = byteArrayToString(data);
-    document.getElementById('recordedString').innerHTML = string.join('');
-    console.log(`Received string: ${string}`);
+    this.updateAudioTransmitter(audioTransmitter);
   }
 
   visualize = (stream) => {
-    const { audioCtx } = this.state;
+    const { audioTransmitter } = this.state;
+    const audioCtx = audioTransmitter.audioCtx;
 
     audioCtx.resume();
 
@@ -439,25 +232,28 @@ export default class Debug extends Component {
   }
 
   onDataTypeSelectChanged = (event) => {
-    this.setState({
-      dataType: event.target.value
-    });
+    const { audioTransmitter } = this.state;
+    audioTransmitter.updateDataType(event.target.value);
+
+    this.updateAudioTransmitter(audioTransmitter);
   }
 
   onPlaybackValueInputChanged = (event) => {
-    this.setState({
-      playbackValue: event.target.value
-    });
+    const { audioTransmitter } = this.state;
+    audioTransmitter.updatePlaybackValue(event.target.value);
+
+    this.updateAudioTransmitter(audioTransmitter);
   }
 
   onPlaybackDurationInputChanged = (event) => {
-    this.setState({
-      playbackDuration: event.target.value
-    });
+    const { audioTransmitter } = this.state;
+    audioTransmitter.updatePlaybackDuration(event.target.value);
+
+    this.updateAudioTransmitter(audioTransmitter);
   }
 
   render = () => {
-    const { dataType, isPlayingBack, playbackBytes, playbackDuration, playbackFrequencies, playbackValue, recording } = this.state;
+    const { audioTransmitter, lastRecordedColor } = this.state;
 
     return (
       <div className="Debug">
@@ -481,45 +277,44 @@ export default class Debug extends Component {
           </tr>
           <tr>
             <td>
-              <div id="recordedColor"></div>
+              <div id="recordedColor" style={{ backgroundColor: lastRecordedColor }}></div>
             </td>
             <td id='recordedInteger'></td>
             <td id='recordedString'></td>
           </tr>
         </table>
 
-        <button type="button" onClick={this.onStartRecord} disabled={recording}>Start Recording</button>
+        <button type="button" onClick={this.onStartRecord} disabled={audioTransmitter.isRecording}>Start Recording</button>
 
-        <button type="button" onClick={this.onStopRecord} disabled={!recording}>Stop Recording</button>
+        <button type="button" onClick={this.onStopRecord} disabled={!audioTransmitter.isRecording}>Stop Recording</button>
 
         <br></br>
 
         <form id="frequencyForm">
           <label><b>Data type </b>(ensure that this is the same both on the receiver, as well as the sender)</label>
-          <select id="dataType" value={dataType} onChange={this.onDataTypeSelectChanged}>
+          <select id="dataType" value={audioTransmitter.dataType} onChange={this.onDataTypeSelectChanged}>
             <option value="color">Color</option>
             <option value="integer">Integer</option>
             <option value="string">String</option>
           </select><br></br>
           <label>Value to transmit</label>
-          <input type="text" id="playbackValue" size="50" value={playbackValue} onChange={this.onPlaybackValueInputChanged}></input><br></br>
+          <input type="text" id="playbackValue" size="50" value={audioTransmitter.playbackValue} onChange={this.onPlaybackValueInputChanged}></input><br></br>
           <label>Tone byte values (separated by ',')</label>
-          <input type="text" id="playbackBytes" size="50" disabled="disabled" value={playbackBytes}></input><br></br>
+          <input type="text" id="playbackBytes" size="50" disabled="disabled" value={audioTransmitter.playbackBytes}></input><br></br>
           <label>Tone frequencies</label>
-          <input type="text" id="playbackFrequencies" size="50" disabled="disabled" value={playbackFrequencies}></input><br></br>
+          <input type="text" id="playbackFrequencies" size="50" disabled="disabled" value={audioTransmitter.playbackFrequencies}></input><br></br>
           <label>Tone duration (in seconds)</label>
-          <input type="text" id="playbackDuration" size="50" value={playbackDuration} onChange={this.onPlaybackDurationInputChanged}></input><br></br>
+          <input type="text" id="playbackDuration" size="50" value={audioTransmitter.playbackDuration} onChange={this.onPlaybackDurationInputChanged}></input><br></br>
           <label><b>Don't forget to hit Submit!</b></label><br></br>
-          <input type="submit" onClick={this.onFormPlaybackSubmit}></input>
         </form>
 
         <button type="button" onClick={this.onGenerateColorRequest}>Generate Color Request</button>
         <button type="button" onClick={this.onGenerateIntegerRequest}>Generate Integer Request</button>
         <button type="button" onClick={this.onGenerateStringRequest}>Generate String Request</button><br></br>
 
-        <button type="button" onClick={this.onStartAudio} disabled={isPlayingBack}>Start Audio Playback</button>
+        <button type="button" onClick={this.onStartAudio} disabled={audioTransmitter.isPlayingBack}>Start Audio Playback</button>
 
-        <button type="button" onClick={this.onStopAudio} disabled={!isPlayingBack}>Stop Audio Playback</button>
+        <button type="button" onClick={this.onStopAudio} disabled={!audioTransmitter.isPlayingBack}>Stop Audio Playback</button>
 
         <table style={{ width: '100%' }}>
           <tr>
