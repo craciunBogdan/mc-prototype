@@ -1,4 +1,4 @@
-import { byteToFrequency, buildFrequencyArray, checkRequestType, colorToByteArray, intToByteArray, stringToByteArray, areSameFrequency, isRequestMarkTone, isResponseMarkTone, frequencyToByte, byteArrayToColor, byteArrayToInt, byteArrayToString, createOscillator } from './audio-utils';
+import { byteToFrequency, buildFrequencyArray, checkRequestType, colorToByteArray, intToByteArray, stringToByteArray, areSameFrequency, isRequestMarkTone, isResponseMarkTone, frequencyToByte, byteArrayToColor, byteArrayToInt, byteArrayToString, createOscillator, hexToRGBArray } from './audio-utils';
 
 export default class AudioTransmitter {
     constructor() {
@@ -191,6 +191,12 @@ export default class AudioTransmitter {
     refreshValues = () => {
         switch (this.dataType) {
             case 'color':
+                // If the playbackValue is a hex value, convert it to a string input array
+                if (this.playbackValue[0] === '#') {
+                    const rgb = hexToRGBArray(this.playbackValue);
+                    this.playbackValue = rgb.join(',')
+                }
+
                 this.playbackBytes = colorToByteArray(this.playbackValue.split(',').map(s => parseInt(s)));
                 break;
             case 'integer':

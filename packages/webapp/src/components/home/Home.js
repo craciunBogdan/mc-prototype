@@ -24,7 +24,10 @@ function Home() {
 
     const sendColor = () => {
         audioTransmitter.startPlaying();
-        // TODO
+
+        // Refresh audio transmitter
+        setAudioTransmitter(audioTransmitter);
+
         console.log(`Sent ${color}`);
     }
 
