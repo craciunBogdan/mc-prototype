@@ -1,4 +1,4 @@
-import { buildFrequencyArray, checkRequestType, colorToByteArray, intToByteArray, stringToByteArray, areSameFrequency, isRequestMarkTone, isResponseMarkTone, frequencyToByte, byteArrayToColor, byteArrayToInt, byteArrayToString, createOscillator } from './audio-utils';
+import { byteToFrequency, buildFrequencyArray, checkRequestType, colorToByteArray, intToByteArray, stringToByteArray, areSameFrequency, isRequestMarkTone, isResponseMarkTone, frequencyToByte, byteArrayToColor, byteArrayToInt, byteArrayToString, createOscillator } from './audio-utils';
 
 export default class AudioTransmitter {
     constructor() {
@@ -13,18 +13,125 @@ export default class AudioTransmitter {
         this.playbackDuration = 0.5; // seconds
         this.recordedValues = [];
         this.timeOfRecording = 0;
+
+        this.analyser = null;
+        this.rawRecordedDataArray = [];
+        this.interval = null;
     }
 
-    startRecording = () => {
-        if (this.isRecording) {
-            return;
+    /**
+     * Destroys any live input or output from the audio transmitter.
+     */
+    destroy = () => {
+        this.stopAudioInputSource();
+        this.stopPlaying();
+    }
+
+    // ===== RECORDING METHODS
+    /**
+     * Request permissions and aquire live input from the microphone.
+     */
+    requestAudioInputSource = (onComplete) => {
+        if (navigator.mediaDevices.getUserMedia) {
+            const constraints = { audio: true };
+
+            let onSuccess = (stream) => {
+                this.stream = stream;
+
+                // Do the rest of preparation to record
+                this.prepareAudioInputSource();
+
+                onComplete();
+            }
+
+            let onError = (err) => {
+                console.log('The following error occured: ' + err);
+            }
+
+            navigator.mediaDevices.getUserMedia(constraints).then(onSuccess, onError);
+        } else {
+            console.log('getUserMedia not supported on your browser!');
         }
+    }
+
+    stopAudioInputSource = () => {
+        // Clear input stream
+        if (this.stream) {
+            this.stream.getTracks().forEach((track) => {
+                track.stop();
+            });
+        }
+
+        this.stream = null;
+    }
+
+    /**
+     * Do the initialization to support live audio recording.
+     */
+    prepareAudioInputSource = () => {
+        this.audioCtx.resume();
+
+        const source = this.audioCtx.createMediaStreamSource(this.stream);
+
+        this.analyser = this.audioCtx.createAnalyser();
+        this.analyser.fftSize = 8192;
+        this.bufferLength = this.analyser.frequencyBinCount;
+
+        // Data array used for recording
+        this.rawRecordedDataArray = new Uint8Array(this.bufferLength);
+
+        source.connect(this.analyser);
 
         this.recordedValues = [];
         this.isRecording = true;
         this.timeOfRecording = this.audioCtx.currentTime;
 
+        this.recorderLoop();
         console.log('Started recording');
+    }
+
+    recorderLoop = () => {
+        this.interval = setInterval(() => {
+            if (!this.isRecording) {
+                clearInterval(this.interval);
+                return;
+            }
+
+            // Get FFT
+            this.analyser.getByteFrequencyData(this.rawRecordedDataArray);
+
+            //Abusing the draw function to easily get the data array
+            let sampleRate = this.audioCtx.sampleRate;
+            let maxFrequency = sampleRate / 2;
+
+            //Analyze data here
+            const getMaxVal = (data) => {
+                let maxval = [].reduce.call(data, (m, c, i, arr) => c > arr[m] ? i : m) // argmax
+                return maxval;
+            }
+
+            // This converts the frequency data from their representation into Hz.
+            let loudestFrequency = Math.round(maxFrequency / this.bufferLength * getMaxVal(this.rawRecordedDataArray));
+
+            // This is probably the worst way to do this.
+            // We check that it is greater than 950 in order
+            // to get rid of some noise.
+            if (loudestFrequency >= byteToFrequency(-2)) {
+                this.recordedValues.push(loudestFrequency);
+            }
+
+            // Rerun the loop
+            this.recorderLoop();
+        }, 16);
+    }
+
+    startRecording = (onComplete) => {
+        if (this.isRecording) {
+            return;
+        }
+
+        // Get microphone input
+        this.requestAudioInputSource(onComplete);
     }
 
     stopRecording = () => {
@@ -34,12 +141,25 @@ export default class AudioTransmitter {
 
         this.isRecording = false;
 
+        // Clear interval
+        clearInterval(this.interval);
+
+        // Stop audio input source
+        this.stopAudioInputSource();
+
+        // Remove unused variables
+        this.analyser = null;
+        this.rawRecordedDataArray = [];
+
         const realSampleRate = this.recordedValues.length / (this.audioCtx.currentTime - this.timeOfRecording);
         const recordingMap = this.processRecording(this.recordedValues, realSampleRate);
 
+        // Do the data processing
         return this.processData(recordingMap, this.dataType);
     }
+    // ===== END OF RECORDING METHODS
 
+    // ===== PLAYING METHODS 
     startPlaying = () => {
         this.isPlayingBack = true;
 
@@ -66,6 +186,7 @@ export default class AudioTransmitter {
         this.isPlayingBack = false;
         this.oscillator.stop(0);
     }
+    // ===== END OF PLAYING METHODS 
 
     refreshValues = () => {
         switch (this.dataType) {

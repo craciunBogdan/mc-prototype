@@ -9,7 +9,7 @@ export default class Debug extends Component {
 
     this.state = {
       audioTransmitter: new AudioTransmitter(),
-      lastRecordedColor: '#ffffff'
+      lastRecordedValue: ''
     }
 
     this.canvas = null;
@@ -27,17 +27,15 @@ export default class Debug extends Component {
   componentWillUnmount = () => {
     console.log('cleaning up');
 
+    const { audioTransmitter } = this.state;
+
     // Clear animation frame requests
     if (this.canvasRequestAnimationFrameId) {
       cancelAnimationFrame(this.canvasRequestAnimationFrameId);
     }
 
-    // Clear audio recording
-    if (this.mediaRecorder) {
-      this.mediaRecorder.getTracks().forEach((track) => {
-        track.stop();
-      });
-    }
+    // Destroy audio transmitter
+    audioTransmitter.destroy();
   }
 
   updateAudioTransmitter = (audioTransmitter) => {
@@ -93,42 +91,25 @@ export default class Debug extends Component {
   // Start recording button function
   onStartRecord = () => {
     const { audioTransmitter } = this.state;
-    audioTransmitter.startRecording();
-
-    this.updateAudioTransmitter(audioTransmitter);
+    audioTransmitter.startRecording(() => this.updateAudioTransmitter(audioTransmitter));
   }
 
   // Stop recording button function
   onStopRecord = () => {
     const { audioTransmitter } = this.state;
-    audioTransmitter.stopRecording();
+    const recordedValue = audioTransmitter.stopRecording();
 
     this.updateAudioTransmitter(audioTransmitter);
+
+    this.setState({ lastRecordedValue: recordedValue });
   }
 
-  visualize = (stream) => {
-    const { audioTransmitter } = this.state;
-    const audioCtx = audioTransmitter.audioCtx;
-
-    audioCtx.resume();
-
-    const source = audioCtx.createMediaStreamSource(stream);
-
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 8192;
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
-    source.connect(analyser);
-
-    //Analyze data here
-    const process_data = (data) => {
-      let maxval = [].reduce.call(data, (m, c, i, arr) => c > arr[m] ? i : m) // argmax
-      return maxval;
-    }
-
+  visualize = () => {
     const draw = () => {
-      const { recording, recordedValues } = this.state;
+      const { audioTransmitter } = this.state;
+
+      const dataArray = audioTransmitter.rawRecordedDataArray;
+      const bufferLength = audioTransmitter.bufferLength;
 
       const WIDTH = this.canvas.width;
       const HEIGHT = this.canvas.height;
@@ -137,29 +118,13 @@ export default class Debug extends Component {
       // called again the next time
       this.canvasRequestAnimationFrameId = requestAnimationFrame(draw);
 
-      analyser.getByteFrequencyData(dataArray);   //Get FFT
-      // analyser.getByteTimeDomainData(dataArray);    //Get waveform
+      // if (!audioTransmitter.isRecording) {
+      //   return;
+      // }
 
-      //Abusing the draw function to easily get the data array
-      let sampleRate = audioCtx.sampleRate;
-      let maxFrequency = sampleRate / 2;
-      // This converts the frequency data from their representation into Hz.
-      let loudestFrequency = Math.round(maxFrequency / bufferLength * process_data(dataArray));
-
-      document.getElementById('loudestFrequency').innerHTML = loudestFrequency;
-      document.getElementById('sampleRate').innerHTML = sampleRate;
-      document.getElementById('maxFrequency').innerHTML = maxFrequency;
-
-      // This is probably the worst way to do this.
-      // We check that it is greater than 950 in order
-      // to get rid of some noise.
-      if (recording && loudestFrequency >= byteToFrequency(-2)) {
-        recordedValues.push(loudestFrequency);
-
-        this.setState({
-          recordedValues
-        });
-      }
+      // document.getElementById('loudestFrequency').innerHTML = loudestFrequency;
+      // document.getElementById('sampleRate').innerHTML = sampleRate;
+      // document.getElementById('maxFrequency').innerHTML = maxFrequency;
 
       //Clear the canvas
       this.canvasCtx.fillStyle = 'rgb(200, 200, 200)';
@@ -195,28 +160,6 @@ export default class Debug extends Component {
     draw();
   }
 
-  // main block for doing the audio recording
-  startAudioRecording = () => {
-    if (navigator.mediaDevices.getUserMedia) {
-      const constraints = { audio: true };
-
-      let onSuccess = (stream) => {
-        this.mediaRecorder = new MediaRecorder(stream);
-        this.mediaRecorder = stream;
-        this.visualize(stream);
-      }
-
-      let onError = (err) => {
-        console.log('The following error occured: ' + err);
-      }
-
-      navigator.mediaDevices.getUserMedia(constraints).then(onSuccess, onError);
-
-    } else {
-      console.log('getUserMedia not supported on your browser!');
-    }
-  }
-
   // Inputs reactions
   setCanvas = (ref) => {
     // No need to use on every state update
@@ -228,7 +171,7 @@ export default class Debug extends Component {
     this.canvasCtx = this.canvas.getContext("2d");
     this.canvas.width = window.innerWidth;
 
-    this.startAudioRecording();
+    this.visualize();
   }
 
   onDataTypeSelectChanged = (event) => {
@@ -253,7 +196,7 @@ export default class Debug extends Component {
   }
 
   render = () => {
-    const { audioTransmitter, lastRecordedColor } = this.state;
+    const { audioTransmitter, lastRecordedValue } = this.state;
 
     return (
       <div className="Debug">
@@ -269,20 +212,9 @@ export default class Debug extends Component {
           <pre id="log"></pre>
         </div>
 
-        <table style={{ width: '100%' }}>
-          <tr>
-            <th>Recorded Color</th>
-            <th>Recorded Integer</th>
-            <th>Recorded String</th>
-          </tr>
-          <tr>
-            <td>
-              <div id="recordedColor" style={{ backgroundColor: lastRecordedColor }}></div>
-            </td>
-            <td id='recordedInteger'></td>
-            <td id='recordedString'></td>
-          </tr>
-        </table>
+        <div id="last-recorded">
+          <p>{`Last recorded value: ${lastRecordedValue}`}</p>
+        </div>
 
         <button type="button" onClick={this.onStartRecord} disabled={audioTransmitter.isRecording}>Start Recording</button>
 
