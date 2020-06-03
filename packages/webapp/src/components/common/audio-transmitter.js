@@ -1,4 +1,4 @@
-import { byteToFrequency, buildFrequencyArray, checkRequestType, colorToByteArray, intToByteArray, stringToByteArray, areSameFrequency, isRequestMarkTone, isResponseMarkTone, frequencyToByte, byteArrayToColor, byteArrayToInt, byteArrayToString, createOscillator, hexToRGBArray } from './audio-utils';
+import { byteToFrequency, buildFrequencyArray, checkRequestType, colorToByteArray, intToByteArray, stringToByteArray, areSameFrequency, isRequestMarkTone, isResponseMarkTone, frequencyToByte, byteArrayToColor, byteArrayToInt, byteArrayToString, createOscillator, hexToRGBArray, buildIntegerRequestArray, buildStringRequestArray, buildColorRequestArray } from './audio-utils';
 
 export default class AudioTransmitter {
     constructor() {
@@ -7,12 +7,14 @@ export default class AudioTransmitter {
         this.isPlayingBack = false;
         this.isRecording = false;
         this.oscillator = null;
+        this.recordedValues = [];
+        this.sendType = 'response';
+        this.timeOfRecording = 0;
+
         this.playbackValue = '255, 0, 255';
         this.playbackBytes = colorToByteArray([255, 0, 255]);
-        this.playbackFrequencies = buildFrequencyArray(this.playbackBytes, 'response'); // Hz
+        this.playbackFrequencies = this.buildFrequencyArray() // Hz
         this.playbackDuration = 0.5; // seconds
-        this.recordedValues = [];
-        this.timeOfRecording = 0;
 
         this.analyser = null;
         this.rawRecordedDataArray = [];
@@ -197,22 +199,39 @@ export default class AudioTransmitter {
                     this.playbackValue = rgb.join(',')
                 }
 
-                this.playbackBytes = colorToByteArray(this.playbackValue.split(',').map(s => parseInt(s)));
+                if (this.sendType === 'request') {
+                    this.playbackBytes = buildColorRequestArray();
+                } else {
+                    this.playbackBytes = colorToByteArray(this.playbackValue.split(',').map(s => parseInt(s)));
+                }
                 break;
             case 'integer':
-                this.playbackBytes = intToByteArray([parseInt(this.playbackValue)][0]);
+                if (this.sendType === 'request') {
+                    this.playbackBytes = buildIntegerRequestArray();
+                } else {
+                    this.playbackBytes = intToByteArray([parseInt(this.playbackValue)][0])
+                }
                 break;
             case 'string':
-                this.playbackBytes = stringToByteArray(this.playbackValue);
+                if (this.sendType === 'request') {
+                    this.playbackBytes = buildStringRequestArray();
+                } else {
+                    this.playbackBytes = stringToByteArray(this.playbackValue);
+                }
                 break;
             default:
                 console.error("Undefined data type provide: " + this.dataType);
         }
 
         this.playbackDuration = parseFloat(this.playbackDuration);
-        this.playbackFrequencies = buildFrequencyArray(this.playbackBytes, 'response');
+        this.playbackFrequencies = this.buildFrequencyArray();
 
         // TODO log debug??
+    }
+
+    updateSendType = (newSendType) => {
+        this.sendType = newSendType;
+        this.refreshValues();
     }
 
     updateDataType = (newDataType) => {
@@ -233,6 +252,10 @@ export default class AudioTransmitter {
     // ===== PRIVATE METHODS (that can be still accessed from the outside but eh)
     // Function that receives the recording and generates the frequencies it finds and
     // how long they were recorded for.
+    buildFrequencyArray = () => {
+        return buildFrequencyArray(this.playbackBytes, this.sendType);
+    }
+
     processRecording = (recValues, realSampleRate) => {
         var recordingMap = new Map();
         var counter = 1;

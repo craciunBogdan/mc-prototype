@@ -42,36 +42,6 @@ export default class Debug extends Component {
     this.setState({ audioTransmitter });
   }
 
-  onGenerateColorRequest = () => {
-    const playbackBytes = buildColorRequestArray();
-
-    this.setState({
-      playbackBytes,
-      playbackFrequencies: buildFrequencyArray(playbackBytes, 'request'),
-      dataType: 'color'
-    });
-  }
-
-  onGenerateIntegerRequest = () => {
-    const playbackBytes = buildIntegerRequestArray();
-
-    this.setState({
-      playbackBytes,
-      playbackFrequencies: buildFrequencyArray(playbackBytes, 'request'),
-      dataType: 'integer'
-    });
-  }
-
-  onGenerateStringRequest = () => {
-    const playbackBytes = buildStringRequestArray();
-
-    this.setState({
-      playbackBytes,
-      playbackFrequencies: buildFrequencyArray(playbackBytes, 'request'),
-      dataType: 'string'
-    });
-  }
-
   // Start audio playback button function
   onStartAudio = () => {
     const { audioTransmitter } = this.state;
@@ -195,6 +165,18 @@ export default class Debug extends Component {
     this.updateAudioTransmitter(audioTransmitter);
   }
 
+  onSendTypeCheckBoxChanged = () => {
+    const { audioTransmitter } = this.state;
+
+    if (audioTransmitter.sendType === 'response') {
+      audioTransmitter.updateSendType('request');
+    } else {
+      audioTransmitter.updateSendType('response');
+    }
+    
+    this.updateAudioTransmitter(audioTransmitter);
+  }
+
   render = () => {
     const { audioTransmitter, lastRecordedValue } = this.state;
 
@@ -240,9 +222,15 @@ export default class Debug extends Component {
           <label><b>Don't forget to hit Submit!</b></label><br></br>
         </form>
 
-        <button type="button" onClick={this.onGenerateColorRequest}>Generate Color Request</button>
-        <button type="button" onClick={this.onGenerateIntegerRequest}>Generate Integer Request</button>
-        <button type="button" onClick={this.onGenerateStringRequest}>Generate String Request</button><br></br>
+        <label>
+          Is request? 
+          <input
+            name="isRequest"
+            type="checkbox"
+            checked={audioTransmitter.sendType !== 'response'}
+            onChange={this.onSendTypeCheckBoxChanged} />
+        </label>
+        
 
         <button type="button" onClick={this.onStartAudio} disabled={audioTransmitter.isPlayingBack}>Start Audio Playback</button>
 
