@@ -309,9 +309,7 @@ export default class AudioTransmitter {
                     console.log("The received request did not comply with protocol. Check error to see what the problem was.");
                 } else {
                     console.log("Received request for " + requestType + " data.");
-                    this.setState({
-                        dataType: requestType
-                    });
+                    this.dataType = requestType;
                 }
                 break;
             case 'response':
