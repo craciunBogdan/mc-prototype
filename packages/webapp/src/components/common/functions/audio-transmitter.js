@@ -14,7 +14,7 @@ export default class AudioTransmitter {
         this.playbackValue = '255, 0, 255';
         this.playbackBytes = colorToByteArray([255, 0, 255]);
         this.playbackFrequencies = this.__buildFrequencyArray() // Hz
-        this.playbackDuration = 0.5; // seconds
+        this.playbackDuration = 1; // seconds
 
         this.analyser = null;
         this.rawRecordedDataArray = [];
