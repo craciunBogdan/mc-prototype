@@ -1,14 +1,14 @@
 import React, { Component } from 'react';
 import './Debug.css';
-import { buildFrequencyArray, buildColorRequestArray, buildIntegerRequestArray, buildStringRequestArray, byteToFrequency } from '../common/audio-utils';
-import AudioTransmitter from '../common/audio-transmitter';
+import { buildFrequencyArray, buildColorRequestArray, buildIntegerRequestArray, buildStringRequestArray, byteToFrequency } from '../common/functions/audio-utils';
+import AudioTransmitter from '../common/functions/audio-transmitter';
 
 export default class Debug extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
-      audioTransmitter: new AudioTransmitter(),
+      audioTransmitter: new AudioTransmitter(this.updateAudioTransmitter),
       lastRecordedValue: ''
     }
 
@@ -46,30 +46,24 @@ export default class Debug extends Component {
   onStartAudio = () => {
     const { audioTransmitter } = this.state;
     audioTransmitter.startPlaying();
-
-    this.updateAudioTransmitter(audioTransmitter);
   }
 
   // Stop audio playback button function
   onStopAudio = () => {
     const { audioTransmitter } = this.state;
     audioTransmitter.stopPlaying();
-
-    this.updateAudioTransmitter(audioTransmitter);
   }
 
   // Start recording button function
   onStartRecord = () => {
     const { audioTransmitter } = this.state;
-    audioTransmitter.startRecording(() => this.updateAudioTransmitter(audioTransmitter));
+    audioTransmitter.startRecording();
   }
 
   // Stop recording button function
   onStopRecord = () => {
     const { audioTransmitter } = this.state;
     const recordedValue = audioTransmitter.stopRecording();
-
-    this.updateAudioTransmitter(audioTransmitter);
 
     this.setState({ lastRecordedValue: recordedValue });
   }
@@ -147,22 +141,16 @@ export default class Debug extends Component {
   onDataTypeSelectChanged = (event) => {
     const { audioTransmitter } = this.state;
     audioTransmitter.updateDataType(event.target.value);
-
-    this.updateAudioTransmitter(audioTransmitter);
   }
 
   onPlaybackValueInputChanged = (event) => {
     const { audioTransmitter } = this.state;
     audioTransmitter.updatePlaybackValue(event.target.value);
-
-    this.updateAudioTransmitter(audioTransmitter);
   }
 
   onPlaybackDurationInputChanged = (event) => {
     const { audioTransmitter } = this.state;
     audioTransmitter.updatePlaybackDuration(event.target.value);
-
-    this.updateAudioTransmitter(audioTransmitter);
   }
 
   onSendTypeCheckBoxChanged = () => {
@@ -173,8 +161,6 @@ export default class Debug extends Component {
     } else {
       audioTransmitter.updateSendType('response');
     }
-    
-    this.updateAudioTransmitter(audioTransmitter);
   }
 
   render = () => {
