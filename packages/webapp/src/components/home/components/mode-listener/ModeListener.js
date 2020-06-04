@@ -19,8 +19,15 @@ function ModeListener() {
         if (audioTransmitter.isRecording) {
             const data = audioTransmitter.stopRecording();
             console.log(data);
+        
+            if (data === 'color') {
+                history.push('/picker');
+            } else if (data === 'integer') {
+                history.push('raw?type=integer');
+            } else if (data === 'string') {
+                history.push('raw?type=string');
+            }
 
-            history.push('/picker');
             setButtonText('Start listening for mode');
         } else {
             setButtonText('Stop listening for mode');

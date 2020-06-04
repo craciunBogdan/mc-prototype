@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import ColorPicker from './components/color-picker/ColorPicker';
 import ModeListener from './components/mode-listener/ModeListener';
+import Raw from './components/raw/Raw';
 
 function Home() {
     return (
@@ -14,6 +15,9 @@ function Home() {
             <HashRouter>
                 <Route path="/picker">
                     <ColorPicker />
+                </Route>
+                <Route path="/raw">
+                    <Raw />
                 </Route>
                 <Route exact path="/">
                     <ModeListener/>
