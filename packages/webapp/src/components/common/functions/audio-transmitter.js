@@ -339,6 +339,7 @@ export default class AudioTransmitter {
                 } else {
                     console.log("Received request for " + requestType + " data.");
                     this.dataType = requestType;
+                    return requestType;
                 }
                 break;
             case 'response':
