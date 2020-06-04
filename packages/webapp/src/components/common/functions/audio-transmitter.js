@@ -1,7 +1,7 @@
 import { byteToFrequency, buildFrequencyArray, checkRequestType, colorToByteArray, intToByteArray, stringToByteArray, areSameFrequency, isRequestMarkTone, isResponseMarkTone, frequencyToByte, byteArrayToColor, byteArrayToInt, byteArrayToString, createOscillator, hexToRGBArray, buildIntegerRequestArray, buildStringRequestArray, buildColorRequestArray } from './audio-utils';
 
 export default class AudioTransmitter {
-    constructor() {
+    constructor(selfStateUpdater) {
         this.audioCtx = new AudioContext();
         this.dataType = 'color';
         this.isPlayingBack = false;
@@ -13,12 +13,14 @@ export default class AudioTransmitter {
 
         this.playbackValue = '255, 0, 255';
         this.playbackBytes = colorToByteArray([255, 0, 255]);
-        this.playbackFrequencies = this.buildFrequencyArray() // Hz
+        this.playbackFrequencies = this.__buildFrequencyArray() // Hz
         this.playbackDuration = 0.5; // seconds
 
         this.analyser = null;
         this.rawRecordedDataArray = [];
         this.interval = null;
+        
+        this.selfStateUpdater = selfStateUpdater ? selfStateUpdater : () => {};
     }
 
     /**
@@ -27,6 +29,10 @@ export default class AudioTransmitter {
     destroy = () => {
         this.stopAudioInputSource();
         this.stopPlaying();
+    }
+
+    selfUpdate = () => {
+        this.selfStateUpdater(this);
     }
 
     // ===== RECORDING METHODS
@@ -42,6 +48,8 @@ export default class AudioTransmitter {
 
                 // Do the rest of preparation to record
                 this.prepareAudioInputSource();
+
+                this.selfUpdate();
 
                 onComplete();
             }
@@ -65,6 +73,8 @@ export default class AudioTransmitter {
         }
 
         this.stream = null;
+
+        this.selfUpdate();
     }
 
     /**
@@ -89,6 +99,8 @@ export default class AudioTransmitter {
         this.timeOfRecording = this.audioCtx.currentTime;
 
         this.recorderLoop();
+
+        this.selfUpdate();
         console.log('Started recording');
     }
 
@@ -124,6 +136,8 @@ export default class AudioTransmitter {
 
             // Rerun the loop
             this.recorderLoop();
+
+            this.selfUpdate();
         }, 16);
     }
 
@@ -154,10 +168,12 @@ export default class AudioTransmitter {
         this.rawRecordedDataArray = [];
 
         const realSampleRate = this.recordedValues.length / (this.audioCtx.currentTime - this.timeOfRecording);
-        const recordingMap = this.processRecording(this.recordedValues, realSampleRate);
+        const recordingMap = this.__processRecording(this.recordedValues, realSampleRate);
+
+        this.selfUpdate();
 
         // Do the data processing
-        return this.processData(recordingMap, this.dataType);
+        return this.__processData(recordingMap, this.dataType);
     }
     // ===== END OF RECORDING METHODS
 
@@ -169,6 +185,8 @@ export default class AudioTransmitter {
             console.log('stopped playing');
 
             this.isPlayingBack = false;
+
+            this.selfUpdate();
 
             if (onStoppedPlaying) {
                 onStoppedPlaying(this);
@@ -186,11 +204,15 @@ export default class AudioTransmitter {
         this.oscillator.connect(this.audioCtx.destination);
         this.oscillator.start(currentTime)
         this.oscillator.stop(endTime);
+
+        this.selfUpdate();
     }
 
     stopPlaying = () => {
         this.isPlayingBack = false;
         this.oscillator.stop(0);
+
+        this.selfUpdate();
     }
     // ===== END OF PLAYING METHODS 
 
@@ -228,8 +250,9 @@ export default class AudioTransmitter {
         }
 
         this.playbackDuration = parseFloat(this.playbackDuration);
-        this.playbackFrequencies = this.buildFrequencyArray();
+        this.playbackFrequencies = this.__buildFrequencyArray();
 
+        this.selfUpdate();
         // TODO log debug??
     }
 
@@ -256,11 +279,11 @@ export default class AudioTransmitter {
     // ===== PRIVATE METHODS (that can be still accessed from the outside but eh)
     // Function that receives the recording and generates the frequencies it finds and
     // how long they were recorded for.
-    buildFrequencyArray = () => {
+    __buildFrequencyArray = () => {
         return buildFrequencyArray(this.playbackBytes, this.sendType);
     }
 
-    processRecording = (recValues, realSampleRate) => {
+    __processRecording = (recValues, realSampleRate) => {
         var recordingMap = new Map();
         var counter = 1;
         var index = 0;
@@ -285,7 +308,7 @@ export default class AudioTransmitter {
 
     // Given the frequencies and the type of data, process the data and
     // generate the appropriate response.
-    processData = (recordingMap, dt) => {
+    __processData = (recordingMap, dt) => {
         var valid = false;
         var messageType = null;
         var data = [];
@@ -319,11 +342,11 @@ export default class AudioTransmitter {
             case 'response':
                 switch (dt) {
                     case 'color':
-                        return this.processColor(data);
+                        return this.__processColor(data);
                     case 'integer':
-                        return this.processInteger(data);
+                        return this.__processInteger(data);
                     case 'string':
-                        return this.processString(data);
+                        return this.__processString(data);
                     default:
                         console.error("Undefined data type in response: " + dt);
                 }
@@ -334,7 +357,7 @@ export default class AudioTransmitter {
     }
 
     // Process the data when the data type is color
-    processColor = (data) => {
+    __processColor = (data) => {
         console.log(data);
         if (data.length !== 6) {
             console.log("Unexpected number of values were received: " + data.length + "\nExpected 6");
@@ -347,7 +370,7 @@ export default class AudioTransmitter {
     }
 
     // Process the data when the data type is integer
-    processInteger = (data) => {
+    __processInteger = (data) => {
         console.log(data);
         console.log(data.length);
         if (data.length !== 8) {
@@ -360,7 +383,7 @@ export default class AudioTransmitter {
     }
 
     // Process the data when the data type is string
-    processString = (data) => {
+    __processString = (data) => {
         console.log(data);
         console.log(data.length);
         var string = byteArrayToString(data);

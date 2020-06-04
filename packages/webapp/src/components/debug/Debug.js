@@ -1,14 +1,14 @@
 import React, { Component } from 'react';
 import './Debug.css';
-import { buildFrequencyArray, buildColorRequestArray, buildIntegerRequestArray, buildStringRequestArray, byteToFrequency } from '../common/audio-utils';
-import AudioTransmitter from '../common/audio-transmitter';
+import { buildFrequencyArray, buildColorRequestArray, buildIntegerRequestArray, buildStringRequestArray, byteToFrequency } from '../common/functions/audio-utils';
+import AudioTransmitter from '../common/functions/audio-transmitter';
 
 export default class Debug extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
-      audioTransmitter: new AudioTransmitter(),
+      audioTransmitter: new AudioTransmitter(this.updateAudioTransmitter),
       lastRecordedValue: ''
     }
 
@@ -47,7 +47,7 @@ export default class Debug extends Component {
     const { audioTransmitter } = this.state;
     audioTransmitter.startPlaying();
 
-    this.updateAudioTransmitter(audioTransmitter);
+    // this.updateAudioTransmitter(audioTransmitter);
   }
 
   // Stop audio playback button function
@@ -55,7 +55,7 @@ export default class Debug extends Component {
     const { audioTransmitter } = this.state;
     audioTransmitter.stopPlaying();
 
-    this.updateAudioTransmitter(audioTransmitter);
+    // this.updateAudioTransmitter(audioTransmitter);
   }
 
   // Start recording button function
