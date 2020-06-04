@@ -37,9 +37,9 @@ function Raw() {
 
     return (
         <div className="full-screen-base">
-            <div className="full-screen-container">
-                <p>{`Input your ${type} here...`}</p>
-                <input value={textValue} onChange={inputTextChanged} />
+            <div className="full-screen-container input-container">
+                <p className="input-item">{`Input your ${type} here...`}</p>
+                <input value={textValue} onChange={inputTextChanged} className="input-item"/>
                 <RoundedButton
                     onClick={onSendButtonClicked}
                     text={buttonText}

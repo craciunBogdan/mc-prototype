@@ -1,0 +1,8 @@
+.input-container {
+    display: flex;
+    flex-flow: column;
+}
+
+.input-item {
+    margin: 16px;
+}
