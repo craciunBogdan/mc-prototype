@@ -51,7 +51,9 @@ export default class AudioTransmitter {
 
                 this.selfUpdate();
 
-                onComplete();
+                if (onComplete) {
+                    onComplete();
+                }
             }
 
             let onError = (err) => {
@@ -352,7 +354,7 @@ export default class AudioTransmitter {
                 }
                 break;
             default:
-                console.error("Undefined message type: " + messageType);
+                console.warn("Undefined message type: " + messageType);
         }
     }
 

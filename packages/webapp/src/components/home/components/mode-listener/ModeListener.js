@@ -7,20 +7,31 @@ import AudioTransmitter from '../../../common/functions/audio-transmitter';
 
 function ModeListener() {
     const [audioTransmitter, setAudioTransmitter] = useState(new AudioTransmitter());
+    const [buttonText, setButtonText] = useState('Start listening for mode');
+
+    if (audioTransmitter.selfStateUpdater !== setAudioTransmitter) {
+        audioTransmitter.selfStateUpdater = setAudioTransmitter;
+        setAudioTransmitter(audioTransmitter);
+    }
 
     const startRecording = () => {
-        audioTransmitter.startRecording();
+        if (audioTransmitter.isRecording) {
+            const data = audioTransmitter.stopRecording();
+            console.log(data);
+            setButtonText('Start listening for mode');
+        } else {
+            setButtonText('Stop listening for mode');
+            audioTransmitter.startRecording();
+        }
     }
 
     return (
         <div className="full-screen-base">
-            <div>
-                <Link to="/picker" className="full-screen-container centered-dimensions">
-                    <RoundedButton
-                        text={'Start listening for mode'}
-                        onClick={startRecording}
-                    />
-                </Link>
+            <div className="full-screen-container centered-dimensions">
+                <RoundedButton
+                    text={buttonText}
+                    onClick={startRecording}
+                />
             </div>
         </div>
     )
