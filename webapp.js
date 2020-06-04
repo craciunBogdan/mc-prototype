@@ -5,8 +5,6 @@ const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 const webappPath = path.join('packages', 'webapp');
 
-console.log('WHAT');
-
 // Force perform 'npm install'
 if (!fs.existsSync(path.join(webappPath, 'node_modules')) || process.argv.includes('--install')) {
     console.log('RUNNING npm install...');

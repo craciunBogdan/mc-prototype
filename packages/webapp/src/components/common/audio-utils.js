@@ -85,10 +85,15 @@ export const checkRequestType = (byteArray) => {
             return 'string';
         default:
             console.error("Unrecognized frequency in request message: " + byteArray[1]
-             + "\nCorresponding byte value: " + frequencyToByte(byteArray[1]));
+                + "\nCorresponding byte value: " + frequencyToByte(byteArray[1]));
             return 'undefined';
     }
 };
+
+export const hexToRGBArray = (color) => {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
+    return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : null;
+}
 
 export const colorToByteArray = (color) => {
     return concatenateAllSubarrays(color.map(x => byteToNibbleArray(x)));
@@ -157,16 +162,16 @@ let nibbleArrayToInt = (nibbleArray) => {
 
 let chunk = (array) => {
     if (!array.length) {
-      return [];
+        return [];
     }
     var chunkSize = 2;
     var i, j, t, chunks = [];
     for (i = 0, j = array.length; i < j; i += chunkSize) {
-      t = array.slice(i, i + chunkSize);
-      chunks.push(t);
+        t = array.slice(i, i + chunkSize);
+        chunks.push(t);
     }
     return chunks;
-  };
+};
 
 let concatenateAllSubarrays = (array) => {
     let result = [];
