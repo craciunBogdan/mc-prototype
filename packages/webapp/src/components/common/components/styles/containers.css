@@ -10,3 +10,10 @@
     left: 50%;
     transform: translate(-50%, -50%);
 }
+
+.back-button {
+    position: absolute;
+    margin: auto;
+    top: 16px;
+    left: 15px;
+}

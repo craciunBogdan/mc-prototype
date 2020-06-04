@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import './Raw.css';
 import '../../../common/components/styles/containers.css';
 import RoundedButton from '../../../common/components/rounded-button/RoundedButton';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useHistory } from 'react-router-dom';
 import AudioTransmitter from '../../../common/functions/audio-transmitter';
+import BackButton from '../../../common/components/back-button/BackButton';
 
 function Raw() {
     const location = useLocation();
+    const history = useHistory();
     const params = new URLSearchParams(location.search);
     const type = params.get('type');
 
@@ -24,6 +26,10 @@ function Raw() {
         setTextValue(event.target.value);
     }
 
+    const onBackButtonClicked = () => {
+        history.push('/');
+    }
+
     const onSendButtonClicked = () => {
         if (audioTransmitter.isPlayingBack) {
             audioTransmitter.stopPlaying();
@@ -37,9 +43,12 @@ function Raw() {
 
     return (
         <div className="full-screen-base">
+            <div className="back-button">
+                <BackButton onClick={onBackButtonClicked} />
+            </div>
             <div className="full-screen-container input-container">
                 <p className="input-item">{`Input your ${type} here...`}</p>
-                <input value={textValue} onChange={inputTextChanged} className="input-item"/>
+                <input value={textValue} onChange={inputTextChanged} className="input-item" />
                 <RoundedButton
                     onClick={onSendButtonClicked}
                     text={buttonText}
