@@ -23,7 +23,13 @@ function Home() {
     }
 
     const sendColor = () => {
-        audioTransmitter.startPlaying();
+        if (audioTransmitter.isPlayingBack) {
+            return;
+        }
+        
+        audioTransmitter.startPlaying((at) => {
+            setAudioTransmitter(at);
+        });
 
         // Refresh audio transmitter
         setAudioTransmitter(audioTransmitter);
@@ -47,6 +53,7 @@ function Home() {
                 <button
                     className="activator"
                     onClick={sendColor}
+                    disabled={audioTransmitter.isPlayingBack}
                     style={{ backgroundColor: color }}
                 >
                     Send color

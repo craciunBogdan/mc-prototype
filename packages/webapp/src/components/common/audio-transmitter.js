@@ -162,13 +162,17 @@ export default class AudioTransmitter {
     // ===== END OF RECORDING METHODS
 
     // ===== PLAYING METHODS 
-    startPlaying = () => {
+    startPlaying = (onStoppedPlaying) => {
         this.isPlayingBack = true;
 
         this.oscillator = createOscillator(this.audioCtx, this.playbackFrequencies[0], () => {
             console.log('stopped playing');
 
             this.isPlayingBack = false;
+
+            if (onStoppedPlaying) {
+                onStoppedPlaying(this);
+            }
         });
 
         this.audioCtx.resume();
