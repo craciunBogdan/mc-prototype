@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import './ModeListener.css';
 import '../../../common/components/styles/containers.css';
 import RoundedButton from '../../../common/components/rounded-button/RoundedButton';
-import { Link } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import AudioTransmitter from '../../../common/functions/audio-transmitter';
 
 function ModeListener() {
     const [audioTransmitter, setAudioTransmitter] = useState(new AudioTransmitter());
     const [buttonText, setButtonText] = useState('Start listening for mode');
+    const history = useHistory();
 
     if (audioTransmitter.selfStateUpdater !== setAudioTransmitter) {
         audioTransmitter.selfStateUpdater = setAudioTransmitter;
@@ -18,6 +19,8 @@ function ModeListener() {
         if (audioTransmitter.isRecording) {
             const data = audioTransmitter.stopRecording();
             console.log(data);
+
+            history.push('/picker');
             setButtonText('Start listening for mode');
         } else {
             setButtonText('Stop listening for mode');
