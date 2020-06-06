@@ -1,3 +1,5 @@
+import JSChaCha20 from "js-chacha20";
+
 export const MIN_FREQUENCY = 2000;
 export const MAX_FREQUENCY = 4960;
 export const TONES_NUMBER = 17;
@@ -138,7 +140,43 @@ export const createOscillator = (audioCtx, firstValue, onEnded) => {
     return oscillator;
 };
 
+export const encryptNibbleArray = (keyString, nonce, nibbleArray) => {
+    console.log("Nonce: ", nonce);
+    var encKeyByte = new Uint8Array(stringToByteArray(keyString.substring(0,16).padStart(16, '*')));
+    console.log('Encryption key:', keyString.substring(0,16).padStart(16, '*'));
+    console.log('Encryption key byte array:', encKeyByte);
+
+    var byteArray = nibbleArrayToByteArray(nibbleArray);
+    console.log("Nibble array", nibbleArray, "=> Byte Array", byteArray);
+
+    var encryptedByteArray = new JSChaCha20(encKeyByte, nonce).encrypt(new Uint8Array(byteArray));
+    var encryptedNibbleArray = [];
+    var encryptedNibbleArray = concatenateAllSubarrays(Array.from(encryptedByteArray).map(x => byteToNibbleArray(x)));
+    console.log("Encrypted Byte array", encryptedByteArray, "=> Encrypted Nibble Array", encryptedNibbleArray);
+    return encryptedNibbleArray;
+}
+
+export const decryptNibbleArray = (keyString, nonce, encryptedNibbleArray) => {
+
+    console.log("Nonce: ", nonce);
+    var encKeyByte = new Uint8Array(stringToByteArray(keyString.substring(0,16).padStart(16, '*')));
+    console.log('Decryption key:', keyString.substring(0,16).padStart(16, '*'));
+    console.log('Decryption key byte array:', encKeyByte);
+
+    var encryptedByteArray = nibbleArrayToByteArray(encryptedNibbleArray);
+    console.log("Encrypted Nibble array", encryptedNibbleArray, "=> Encrypted Byte Array", encryptedByteArray);
+
+    var decryptedByteArray = new JSChaCha20(encKeyByte, nonce).decrypt(new Uint8Array(encryptedByteArray));
+    var decryptedNibbleArray = concatenateAllSubarrays(Array.from(decryptedByteArray).map(x => byteToNibbleArray(x)));
+    console.log("Decrypted Byte array", decryptedByteArray, "=> Decrypted Nibble Array", decryptedNibbleArray);
+    return decryptedNibbleArray;
+}
+
+
 let byteToNibbleArray = (value) => {
+    if(value<=15){
+        return [value];
+    }
     var nibbleArray = [0, 0];
 
     for (var i = 0; i < nibbleArray.length; i++) {
@@ -146,7 +184,7 @@ let byteToNibbleArray = (value) => {
         nibbleArray[i] = nibble;
         value = (value - nibble) / 16;
     }
-
+    // console.log("nibble array:", nibbleArray);
     return nibbleArray;
 }
 
@@ -181,4 +219,22 @@ let concatenateAllSubarrays = (array) => {
     }
 
     return result;
+}
+
+let nibbleArrayToByteArray = (nibbleArray) => {
+    let byteArray = [];
+    
+    var i, byteVal = 0;
+    for (i = 0; i < nibbleArray.length-1; i += 2) {
+        byteVal = nibbleArray[i+1] << 4;
+        // console.log("first", byteVal);
+        byteVal = byteVal | nibbleArray[i];
+        // console.log("Second", byteVal);
+        byteArray.push(byteVal);
+    }
+    if(i===nibbleArray.length-1){
+        byteVal = nibbleArray[i];
+        byteArray.push(byteVal);
+    }
+    return byteArray;
 }
