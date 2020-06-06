@@ -174,6 +174,7 @@ export const decryptNibbleArray = (keyString, nonce, encryptedNibbleArray) => {
 
 
 let byteToNibbleArray = (value) => {
+    // TODO introduced a bug when converting values like 255
     if(value<=15){
         return [value];
     }
