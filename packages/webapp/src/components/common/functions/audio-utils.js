@@ -73,7 +73,7 @@ export const buildStringRequestArray = () => {
 };
 
 export const checkRequestType = (byteArray) => {
-    if (byteArray.length > 1) {
+    if (byteArray.length > 2) {
         console.error("Unexpected number of frequencies in request message: " + byteArray.length);
         return 'undefined';
     }
@@ -141,6 +141,13 @@ export const createOscillator = (audioCtx, firstValue, onEnded) => {
 };
 
 export const encryptNibbleArray = (keyString, nonce, nibbleArray) => {
+    if(!keyString){
+        keyString = "";
+    }
+    if(!Array.isArray(nibbleArray) || !nibbleArray.length){
+        console.error("Nothing to encrypt: nibbleArray is empty.");
+        return [];
+    }
     console.log("Nonce: ", nonce);
     var encKeyByte = new Uint8Array(stringToByteArray(keyString.substring(0,16).padStart(16, '*')));
     console.log('Encryption key:', keyString.substring(0,16).padStart(16, '*'));
@@ -157,7 +164,13 @@ export const encryptNibbleArray = (keyString, nonce, nibbleArray) => {
 }
 
 export const decryptNibbleArray = (keyString, nonce, encryptedNibbleArray) => {
-
+    if(!keyString){
+        keyString = "";
+    }
+    if(!Array.isArray(encryptedNibbleArray) || !encryptedNibbleArray.length){
+        console.error("Nothing  to decrypt: encryptedNibbleArray is empty.");
+        return [];
+    }
     console.log("Nonce: ", nonce);
     var encKeyByte = new Uint8Array(stringToByteArray(keyString.substring(0,16).padStart(16, '*')));
     console.log('Decryption key:', keyString.substring(0,16).padStart(16, '*'));
@@ -174,10 +187,6 @@ export const decryptNibbleArray = (keyString, nonce, encryptedNibbleArray) => {
 
 
 let byteToNibbleArray = (value) => {
-    // TODO introduced a bug when converting values like 255
-    if(value<=15){
-        return [value];
-    }
     var nibbleArray = [0, 0];
 
     for (var i = 0; i < nibbleArray.length; i++) {

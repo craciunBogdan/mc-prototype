@@ -23,7 +23,6 @@ export default class AudioTransmitter {
         this.selfStateUpdater = selfStateUpdater ? selfStateUpdater : () => {};
 
         this.nonce = new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12]); // 12 bytes nonce; can be received from arduino
-        this.encKey = "";
     }
 
     /**
@@ -288,8 +287,8 @@ export default class AudioTransmitter {
         if(!this.nonce){
             this.nonce = new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12]);
         }
-        // TODO replace key
-        this.playbackBytes = encryptNibbleArray("someKey", this.nonce, this.playbackBytes);
+        
+        this.playbackBytes = encryptNibbleArray(localStorage.getItem('encKey'), this.nonce, this.playbackBytes);
         return buildFrequencyArray(this.playbackBytes, this.sendType);
     }
 
@@ -342,7 +341,7 @@ export default class AudioTransmitter {
         switch (messageType) {
             case 'request':
                 // TODO replace key
-                data = decryptNibbleArray("someKey", this.nonce, data);
+                data = decryptNibbleArray(localStorage.getItem('encKey'), this.nonce, data);
                 var requestType = checkRequestType(data);
                 if (requestType === 'undefined') {
                     console.log("The received request did not comply with protocol. Check error to see what the problem was.");
@@ -354,7 +353,7 @@ export default class AudioTransmitter {
                 break;
             case 'response':
                 // TODO replace key
-                data = decryptNibbleArray("someKey", this.nonce, data);
+                data = decryptNibbleArray(localStorage.getItem('encKey'), this.nonce, data);
                 if(!this.nonce){
                     this.nonce = new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12]);
                 }
