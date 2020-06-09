@@ -201,14 +201,15 @@ void processColor (double dataValues[], int arraySize) {
     ledcWrite(3, chunkedColor[2]);
     tft.drawString("Color received", 5, 90, 2);
     tft.drawNumber(chunkedColor[0], 5, 120, 2);
-    tft.drawNumber(chunkedColor[0], 25, 120, 2);
-    tft.drawNumber(chunkedColor[0], 45, 120, 2);
+    tft.drawNumber(chunkedColor[1], 35, 120, 2);
+    tft.drawNumber(chunkedColor[2], 65, 120, 2);
 
   }
 }
 
 void processInteger (double dataValues[], int arraySize) {
-  unsigned int value = 0;
+  unsigned long value = 0;
+  String value_string;
   tft.fillScreen(TFT_BLACK);
   if (arraySize != 8) {
     Serial.println("Unexpected number of values were received");
@@ -217,8 +218,9 @@ void processInteger (double dataValues[], int arraySize) {
       value = (value * 16) + dataValues[i];
     }
     Serial.println(value);
+    value_string = String(value);
     tft.drawString("Integer received", 5, 90, 2);
-    tft.drawNumber(value, 5, 120, 4);
+    tft.drawString(value_string, 5, 120, 4);
   }
 }
 
