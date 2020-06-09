@@ -50,6 +50,7 @@ function Raw() {
                 <p className="input-item">{`Input your ${type} here...`}</p>
                 <input value={textValue} onChange={inputTextChanged} className="input-item" />
                 <RoundedButton
+                    disabled={!textValue}
                     onClick={onSendButtonClicked}
                     text={buttonText}
                 />
