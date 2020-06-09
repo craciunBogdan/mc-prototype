@@ -1,4 +1,4 @@
-import { byteToFrequency, buildFrequencyArray, checkRequestType, colorToByteArray, intToByteArray, stringToByteArray, areSameFrequency, isRequestMarkTone, isResponseMarkTone, frequencyToByte, byteArrayToColor, byteArrayToInt, byteArrayToString, createOscillator, hexToRGBArray, buildIntegerRequestArray, buildStringRequestArray, buildColorRequestArray } from './audio-utils';
+import { byteToFrequency, buildFrequencyArray, checkRequestType, colorToByteArray, intToByteArray, stringToByteArray, areSameFrequency, isRequestMarkTone, isResponseMarkTone, frequencyToByte, byteArrayToColor, byteArrayToInt, byteArrayToString, createOscillator, hexToRGBArray, buildIntegerRequestArray, buildStringRequestArray, buildColorRequestArray, isNoise } from './audio-utils';
 
 export default class AudioTransmitter {
     constructor(selfStateUpdater) {
@@ -122,8 +122,24 @@ export default class AudioTransmitter {
 
             //Analyze data here
             const getMaxVal = (data) => {
-                let maxval = [].reduce.call(data, (m, c, i, arr) => c > arr[m] ? i : m) // argmax
-                return maxval;
+                var counter = 0;
+                let maxValue = [].reduce.call(data, (m, c, i, arr) => c > arr[m] ? i : m); // argmax
+                do {
+                    let maxval = 0;
+                    if (counter == 0) {
+                        maxval = maxValue;
+                    } else {
+                        maxval = [].reduce.call(data, (m, c, i, arr) => c > arr[m] ? i : m); // argmax
+                    }
+                    if (!isNoise(Math.floor(maxFrequency / this.bufferLength * maxval))) {
+                        return maxval;
+                    } else {
+                        for (var j = maxval - 10; j < maxval + 10; j++) {
+                            data[j] = 0;
+                        }
+                    }
+                } while (counter++ < 5)
+                return maxValue;
             }
 
             // This converts the frequency data from their representation into Hz.
@@ -132,7 +148,7 @@ export default class AudioTransmitter {
             // This is probably the worst way to do this.
             // We check that it is greater than 950 in order
             // to get rid of some noise.
-            if (loudestFrequency >= byteToFrequency(-2)) {
+            if (loudestFrequency > byteToFrequency(-3)) {
                 this.recordedValues.push(loudestFrequency);
             }
 
@@ -171,6 +187,12 @@ export default class AudioTransmitter {
 
         const realSampleRate = this.recordedValues.length / (this.audioCtx.currentTime - this.timeOfRecording);
         const recordingMap = this.__processRecording(this.recordedValues, realSampleRate);
+
+        // console.log("{");
+        // for (let [_, [freq, duration]] of recordingMap) {
+        //     console.log(`${freq}: ${duration}`);
+        // }
+        // console.log("}");
 
         this.selfUpdate();
 

@@ -138,6 +138,10 @@ export const createOscillator = (audioCtx, firstValue, onEnded) => {
     return oscillator;
 };
 
+export const isNoise = (freq) => {
+    return Math.abs(freq - byteToFrequency(frequencyToByte(freq))) > 10 || freq > MAX_FREQUENCY;
+}
+
 let byteToNibbleArray = (value) => {
     var nibbleArray = [0, 0];
 
