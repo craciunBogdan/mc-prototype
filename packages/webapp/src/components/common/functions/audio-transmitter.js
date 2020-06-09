@@ -21,18 +21,22 @@ export default class AudioTransmitter {
         this.interval = null;
         
         this.selfStateUpdater = selfStateUpdater ? selfStateUpdater : () => {};
+        this.isBeingDestroyed = false;
     }
 
     /**
      * Destroys any live input or output from the audio transmitter.
      */
     destroy = () => {
+        this.isBeingDestroyed = true;
         this.stopAudioInputSource();
         this.stopPlaying();
     }
 
     selfUpdate = () => {
-        this.selfStateUpdater(this);
+        if (!this.isBeingDestroyed) {
+            this.selfStateUpdater(this);
+        }
     }
 
     // ===== RECORDING METHODS

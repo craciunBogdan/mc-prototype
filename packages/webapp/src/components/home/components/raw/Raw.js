@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Raw.css';
 import '../../../common/components/styles/containers.css';
 import RoundedButton from '../../../common/components/rounded-button/RoundedButton';
@@ -21,6 +21,15 @@ function Raw() {
         audioTransmitter.selfStateUpdater = setAudioTransmitter;
         setAudioTransmitter(audioTransmitter);
     }
+
+    useEffect(() => {
+        console.log('cleaning up...');
+
+        // returned function will be called on component unmount 
+        return () => {
+            audioTransmitter.destroy();
+        }
+    }, []);
 
     const inputTextChanged = (event) => {
         setTextValue(event.target.value);

@@ -19,6 +19,15 @@ function ColorPicker() {
         setAudioTransmitter(audioTransmitter);
     }
 
+    useEffect(() => {
+        console.log('cleaning up...');
+
+        // returned function will be called on component unmount 
+        return () => {
+            audioTransmitter.destroy();
+        }
+    }, []);
+
     const handleChange = (color) => {
         setColor(color.hex);
     };
