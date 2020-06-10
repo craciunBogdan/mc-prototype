@@ -57,7 +57,7 @@ function Raw() {
             </div>
             <div className="full-screen-container input-container">
                 <p className="input-item">{`Input your ${type} here...`}</p>
-                <input value={textValue} onChange={inputTextChanged} className="input-item" />
+                <input type={type === 'integer' ? 'number' : 'text'} value={textValue} onChange={inputTextChanged} className="input-item" />
                 <RoundedButton
                     disabled={!textValue}
                     onClick={onSendButtonClicked}
