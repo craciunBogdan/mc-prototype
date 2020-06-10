@@ -149,8 +149,8 @@ export const encryptNibbleArray = (keyString, nonce, nibbleArray) => {
         return [];
     }
     console.log("Nonce: ", nonce);
-    var encKeyByte = new Uint8Array(stringToByteArray(keyString.substring(0,16).padStart(16, '*')));
-    console.log('Encryption key:', keyString.substring(0,16).padStart(16, '*'));
+    var encKeyByte = new Uint8Array(nibbleArrayToByteArray(stringToByteArray(keyString.substring(0,32).padStart(32, '*'))));
+    console.log('Encryption key:', keyString.substring(0,32).padStart(32, '*'));
     console.log('Encryption key byte array:', encKeyByte);
 
     var byteArray = nibbleArrayToByteArray(nibbleArray);
@@ -165,15 +165,15 @@ export const encryptNibbleArray = (keyString, nonce, nibbleArray) => {
 
 export const decryptNibbleArray = (keyString, nonce, encryptedNibbleArray) => {
     if(!keyString){
-        keyString = "";
+        keyString = "someKey";
     }
     if(!Array.isArray(encryptedNibbleArray) || !encryptedNibbleArray.length){
         console.error("Nothing  to decrypt: encryptedNibbleArray is empty.");
         return [];
     }
     console.log("Nonce: ", nonce);
-    var encKeyByte = new Uint8Array(stringToByteArray(keyString.substring(0,16).padStart(16, '*')));
-    console.log('Decryption key:', keyString.substring(0,16).padStart(16, '*'));
+    var encKeyByte = new Uint8Array(stringToByteArray(keyString.substring(0,32).padStart(32, '*')));
+    console.log('Decryption key:', keyString.substring(0,32).padStart(32, '*'));
     console.log('Decryption key byte array:', encKeyByte);
 
     var encryptedByteArray = nibbleArrayToByteArray(encryptedNibbleArray);
@@ -182,6 +182,9 @@ export const decryptNibbleArray = (keyString, nonce, encryptedNibbleArray) => {
     var decryptedByteArray = new JSChaCha20(encKeyByte, nonce).decrypt(new Uint8Array(encryptedByteArray));
     var decryptedNibbleArray = concatenateAllSubarrays(Array.from(decryptedByteArray).map(x => byteToNibbleArray(x)));
     console.log("Decrypted Byte array", decryptedByteArray, "=> Decrypted Nibble Array", decryptedNibbleArray);
+
+
+    // testEncrypt(); TODO remove this
     return decryptedNibbleArray;
 }
 
@@ -247,4 +250,15 @@ let nibbleArrayToByteArray = (nibbleArray) => {
         byteArray.push(byteVal);
     }
     return byteArray;
+}
+
+// TODO remove this
+let testEncrypt = ()=>{
+    console.log("testing encryption from here:");
+    let nonce = new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12]);
+    let key_string = "*********someKey";
+    let numRounds = 20;
+    
+
+
 }

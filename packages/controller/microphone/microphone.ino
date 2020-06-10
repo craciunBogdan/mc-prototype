@@ -34,11 +34,11 @@ boolean recording;
 double recordedValues[MAX_LENGTH];
 long timeOfRecording;
 
-String key_string = "****************";
-String input_string = "Helloo"; 
+String key_string = "*************************someKey";
+String input_string = "17"; 
 byte key_bytes[32];
-uint8_t counter[8] = {109, 110, 111, 112, 113, 114, 115, 116};
-uint8_t output[17], input[17], output_decrypt[17];
+
+uint8_t output[4], input[4], output_decrypt[4]; //Length should be = size of converted input string to byte array. (size of byte array)
 uint8_t nonce[12] = {1,2,3,4,5,6,7,8,9,10,11,12};
 ChaCha chacha = ChaCha();
  
@@ -61,35 +61,33 @@ void setup() {
   ledcSetup(channel, freq, resolution);
   ledcAttachPin(17, channel);
 
-  key_string.getBytes(key_bytes, 17);
+  key_string.getBytes(key_bytes, 32);
   Serial.println(key_string);
-  for (int i=0; i < 17; i++){
+  for (int i=0; i < 32; i++){
     Serial.println(key_bytes[i]);
   }
-  chacha.setKey(key_bytes, 16);
+  chacha.setKey(key_bytes, 32);
   chacha.setIV(nonce, 12);
-//  chacha.setCounter(counter, 8);
   chacha.setNumRounds(20);
 
-  input_string.getBytes(input, 17);
+  input_string.getBytes(input, 4);
   Serial.println("Input");
-  for (int i=0; i < 17; i++){
+  for (int i=0; i < 4; i++){
     Serial.println(input[i]);
   }
-  chacha.encrypt(output, input, 5);
+  chacha.encrypt(output, input, 4);
   Serial.println("Encryption");
-  for (int i=0; i < 17; i++){
+  for (int i=0; i < 4; i++){
     Serial.println(output[i]);
   }
 
-  chacha.setKey(key_bytes, 16);
+  chacha.setKey(key_bytes, 32);
   chacha.setIV(nonce, 12);
   chacha.setNumRounds(20);
-//  chacha.setCounter(counter, 8);
   
-  chacha.decrypt(output_decrypt, output, 17);
+  chacha.decrypt(output_decrypt, output, 4);
   Serial.println("Decryption");
-  for (int i=0; i < 17; i++){
+  for (int i=0; i < 4; i++){
     Serial.println(output_decrypt[i]);
   }
 }
