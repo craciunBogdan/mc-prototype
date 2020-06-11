@@ -1,6 +1,5 @@
 #include "arduinoFFT.h"
 #include <TFT_eSPI.h> // Hardware-specific library
-#include <ChaCha.h> // Encryption Library
 
 #define SAMPLES 1024             //Must be a power of 2
 #define SAMPLING_FREQUENCY 10000 //Hz, must be less than 10000 due to ADC
@@ -10,7 +9,6 @@
 #define TONES_NUMBER 17
 #define FREQUENCY_RANGE floor((MAX_FREQUENCY - MIN_FREQUENCY) / TONES_NUMBER)
 #define MAX_LENGTH 1024
-
 
 arduinoFFT FFT = arduinoFFT();
 
@@ -22,6 +20,7 @@ int bluepin = 27; // select the pin for the blue LED
 int freq = 2000;
 int channel = 0;
 int resolution = 8;
+int cipherNum;
  
 unsigned int sampling_period_us;
 unsigned long microseconds;
@@ -34,14 +33,6 @@ boolean recording;
 double recordedValues[MAX_LENGTH];
 long timeOfRecording;
 
-String key_string = "*************************someKey";
-String input_string = "17"; 
-byte key_bytes[32];
-
-uint8_t output[4], input[4], output_decrypt[4]; //Length should be = size of converted input string to byte array. (size of byte array)
-uint8_t nonce[12] = {1,2,3,4,5,6,7,8,9,10,11,12};
-ChaCha chacha = ChaCha();
- 
 void setup() {
   tft.init();
   tft.fillScreen(TFT_BLACK);
@@ -61,35 +52,11 @@ void setup() {
   ledcSetup(channel, freq, resolution);
   ledcAttachPin(17, channel);
 
-  key_string.getBytes(key_bytes, 32);
-  Serial.println(key_string);
-  for (int i=0; i < 32; i++){
-    Serial.println(key_bytes[i]);
-  }
-  chacha.setKey(key_bytes, 32);
-  chacha.setIV(nonce, 12);
-  chacha.setNumRounds(20);
-
-  input_string.getBytes(input, 4);
-  Serial.println("Input");
-  for (int i=0; i < 4; i++){
-    Serial.println(input[i]);
-  }
-  chacha.encrypt(output, input, 4);
-  Serial.println("Encryption");
-  for (int i=0; i < 4; i++){
-    Serial.println(output[i]);
-  }
-
-  chacha.setKey(key_bytes, 32);
-  chacha.setIV(nonce, 12);
-  chacha.setNumRounds(20);
-  
-  chacha.decrypt(output_decrypt, output, 4);
-  Serial.println("Decryption");
-  for (int i=0; i < 4; i++){
-    Serial.println(output_decrypt[i]);
-  }
+  // generate random number for encryption
+  do {
+    cipherNum = random(1, 50);
+  } while (cipherNum == 8 || cipherNum == 6);
+  drawCipherNum();
 }
  
 void loop() {
@@ -192,9 +159,9 @@ void processRecording() {
 
 void processData (double recordingMap[], double sampleRate[], int arraySize) {
   boolean valid = false;
-  double dataValues[arraySize];
+  double dataValues[arraySize], encodedDataValues[arraySize];
   boolean isResponse;
-  int byteValue, dataIndex = 0;
+  int byteValue, dataIndex = 0, leftShift;
   for(int i = 0; i < arraySize; i++) {
     if (isResponseMarkTone(recordingMap[i], sampleRate[i])) {
       Serial.println("mark tone");
@@ -203,12 +170,28 @@ void processData (double recordingMap[], double sampleRate[], int arraySize) {
     } else if (valid) {
       byteValue = frequencyToByte(recordingMap[i]);
       if ((byteValue != -1) && (sampleRate[i] >= 0.3)) {
-          dataValues[dataIndex] = byteValue;
+          encodedDataValues[dataIndex] = byteValue;
           dataIndex++;
           Serial.println(byteValue);
       }
     }
   }
+  // shift left Ceaser Cipher
+  Serial.println("Ceaser Cipher");
+  leftShift = cipherNum % dataIndex;
+  Serial.println((String)"Left shift:" + leftShift);
+  for (int i = 0; i < dataIndex; i++){
+    if (i < leftShift) {
+      dataValues[dataIndex - leftShift + i] = encodedDataValues[i];
+    } else {
+      dataValues[i - leftShift] = encodedDataValues[i];
+    }
+  }
+
+  for (int i = 0; i < dataIndex; i++) {
+    Serial.println(dataValues[i]);
+  }
+  
 //  processColor(dataValues, dataIndex);
   processInteger(dataValues, dataIndex);
 //  processString(dataValues, dataIndex);
@@ -243,6 +226,7 @@ void processColor (double dataValues[], int arraySize) {
     tft.drawNumber(chunkedColor[0], 25, 120, 2);
     tft.drawNumber(chunkedColor[0], 45, 120, 2);
 
+    drawCipherNum();
   }
 }
 
@@ -259,6 +243,7 @@ void processInteger (double dataValues[], int arraySize) {
     tft.drawString("Integer received", 5, 90, 2);
     tft.drawNumber(value, 5, 120, 4);
   }
+  drawCipherNum();
 }
 
 void processString (double dataValues[], int arraySize) {
@@ -275,6 +260,13 @@ void processString (double dataValues[], int arraySize) {
     indexChunk++;
   }
   tft.drawString(values, 5, 120, 4);
+
+  drawCipherNum();
+}
+
+void drawCipherNum() {
+  tft.drawString("Caesar Cipher:", 5, 20, 2);
+  tft.drawNumber(cipherNum, 5, 40, 2);
 }
 
 int frequencyToByte(double freq) {
