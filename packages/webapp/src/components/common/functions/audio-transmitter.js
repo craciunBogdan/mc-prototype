@@ -13,7 +13,7 @@ export default class AudioTransmitter {
 
         this.playbackValue = '255, 0, 255';
         this.playbackBytes = colorToByteArray([100, 10, 200]);
-        this.playbackFrequencies = this.__buildFrequencyArray() // Hz
+        this.playbackFrequencies = this.__buildFrequencyArray(this.sendType) // Hz
         this.playbackDuration = 1; // seconds
 
         this.analyser = null;
@@ -21,8 +21,6 @@ export default class AudioTransmitter {
         this.interval = null;
         
         this.selfStateUpdater = selfStateUpdater ? selfStateUpdater : () => {};
-
-        this.nonce = new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12]); // 12 bytes nonce; can be received from arduino
     }
 
     /**
@@ -254,7 +252,7 @@ export default class AudioTransmitter {
         }
 
         this.playbackDuration = parseFloat(this.playbackDuration);
-        this.playbackFrequencies = this.__buildFrequencyArray();
+        this.playbackFrequencies = this.__buildFrequencyArray(this.sendType);
 
         this.selfUpdate();
         // TODO log debug??
@@ -283,12 +281,11 @@ export default class AudioTransmitter {
     // ===== PRIVATE METHODS (that can be still accessed from the outside but eh)
     // Function that receives the recording and generates the frequencies it finds and
     // how long they were recorded for.
-    __buildFrequencyArray = () => {
-        if(!this.nonce){
-            this.nonce = new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12]);
-        }
-        
-        this.playbackBytes = encryptNibbleArray(localStorage.getItem('encKey'), this.nonce, this.playbackBytes);
+    __buildFrequencyArray = (sendType) => {
+        // Encrypting only responses
+        if(sendType == 'response'){
+            this.playbackBytes = encryptNibbleArray(localStorage.getItem('encKey'), this.playbackBytes);
+        }                
         return buildFrequencyArray(this.playbackBytes, this.sendType);
     }
 
@@ -340,8 +337,8 @@ export default class AudioTransmitter {
         
         switch (messageType) {
             case 'request':
-                // TODO replace key
-                data = decryptNibbleArray(localStorage.getItem('encKey'), this.nonce, data);
+                // TODO decrypt requests in future?
+                // data = decryptNibbleArray(localStorage.getItem('encKey'), data);
                 var requestType = checkRequestType(data);
                 if (requestType === 'undefined') {
                     console.log("The received request did not comply with protocol. Check error to see what the problem was.");
@@ -352,11 +349,7 @@ export default class AudioTransmitter {
                 }
                 break;
             case 'response':
-                // TODO replace key
-                data = decryptNibbleArray(localStorage.getItem('encKey'), this.nonce, data);
-                if(!this.nonce){
-                    this.nonce = new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12]);
-                }
+                data = decryptNibbleArray(localStorage.getItem('encKey'), data);
                 switch (dt) {
                     case 'color':
                         return this.__processColor(data);

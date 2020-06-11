@@ -1,5 +1,3 @@
-import JSChaCha20 from "js-chacha20";
-
 export const MIN_FREQUENCY = 2000;
 export const MAX_FREQUENCY = 4960;
 export const TONES_NUMBER = 17;
@@ -140,51 +138,33 @@ export const createOscillator = (audioCtx, firstValue, onEnded) => {
     return oscillator;
 };
 
-export const encryptNibbleArray = (keyString, nonce, nibbleArray) => {
-    if(!keyString){
-        keyString = "";
-    }
+export const encryptNibbleArray = (keyString, nibbleArray) => {
+    // Converting key string to int;
+    var keyInt = setEncKey(keyString, nibbleArray.length);
+    console.log("Encryption key in integer", keyInt, "Derived from string", keyString);
+
     if(!Array.isArray(nibbleArray) || !nibbleArray.length){
         console.error("Nothing to encrypt: nibbleArray is empty.");
         return [];
     }
-    console.log("Nonce: ", nonce);
-    var encKeyByte = new Uint8Array(nibbleArrayToByteArray(stringToByteArray(keyString.substring(0,32).padStart(32, '*'))));
-    console.log('Encryption key:', keyString.substring(0,32).padStart(32, '*'));
-    console.log('Encryption key byte array:', encKeyByte);
+    console.log("Nibble array", nibbleArray);
 
-    var byteArray = nibbleArrayToByteArray(nibbleArray);
-    console.log("Nibble array", nibbleArray, "=> Byte Array", byteArray);
+    var encryptedNibbleArray = nibbleArray.concat(nibbleArray.splice(0,nibbleArray.length - keyInt));
+    console.log("Encrypted Nibble Array", encryptedNibbleArray);
 
-    var encryptedByteArray = new JSChaCha20(encKeyByte, nonce).encrypt(new Uint8Array(byteArray));
-    var encryptedNibbleArray = [];
-    var encryptedNibbleArray = concatenateAllSubarrays(Array.from(encryptedByteArray).map(x => byteToNibbleArray(x)));
-    console.log("Encrypted Byte array", encryptedByteArray, "=> Encrypted Nibble Array", encryptedNibbleArray);
     return encryptedNibbleArray;
 }
 
-export const decryptNibbleArray = (keyString, nonce, encryptedNibbleArray) => {
-    if(!keyString){
-        keyString = "someKey";
-    }
-    if(!Array.isArray(encryptedNibbleArray) || !encryptedNibbleArray.length){
-        console.error("Nothing  to decrypt: encryptedNibbleArray is empty.");
-        return [];
-    }
-    console.log("Nonce: ", nonce);
-    var encKeyByte = new Uint8Array(stringToByteArray(keyString.substring(0,32).padStart(32, '*')));
-    console.log('Decryption key:', keyString.substring(0,32).padStart(32, '*'));
-    console.log('Decryption key byte array:', encKeyByte);
+export const decryptNibbleArray = (keyString, encryptedNibbleArray) => {
+    // Converting key string to int;
+    var keyInt = setEncKey(keyString, encryptedNibbleArray.length);
+    console.log("Encryption key in integer:", keyInt, "Derived from string:", keyString);
 
-    var encryptedByteArray = nibbleArrayToByteArray(encryptedNibbleArray);
-    console.log("Encrypted Nibble array", encryptedNibbleArray, "=> Encrypted Byte Array", encryptedByteArray);
+    console.log("Received encrypted Nibble array", encryptedNibbleArray);
 
-    var decryptedByteArray = new JSChaCha20(encKeyByte, nonce).decrypt(new Uint8Array(encryptedByteArray));
-    var decryptedNibbleArray = concatenateAllSubarrays(Array.from(decryptedByteArray).map(x => byteToNibbleArray(x)));
-    console.log("Decrypted Byte array", decryptedByteArray, "=> Decrypted Nibble Array", decryptedNibbleArray);
+    var decryptedNibbleArray = encryptedNibbleArray.concat(encryptedNibbleArray.splice(0,keyInt));
+    console.log("Decrypted Nibble Array", decryptedNibbleArray);
 
-
-    // testEncrypt(); TODO remove this
     return decryptedNibbleArray;
 }
 
@@ -234,31 +214,26 @@ let concatenateAllSubarrays = (array) => {
     return result;
 }
 
-let nibbleArrayToByteArray = (nibbleArray) => {
-    let byteArray = [];
-    
-    var i, byteVal = 0;
-    for (i = 0; i < nibbleArray.length-1; i += 2) {
-        byteVal = nibbleArray[i+1] << 4;
-        // console.log("first", byteVal);
-        byteVal = byteVal | nibbleArray[i];
-        // console.log("Second", byteVal);
-        byteArray.push(byteVal);
-    }
-    if(i===nibbleArray.length-1){
-        byteVal = nibbleArray[i];
-        byteArray.push(byteVal);
-    }
-    return byteArray;
+let isNormalInteger = (str) => {
+    var n = Math.floor(Number(str));
+    return n !== Infinity && String(n) === str && n >= 0;
 }
 
-// TODO remove this
-let testEncrypt = ()=>{
-    console.log("testing encryption from here:");
-    let nonce = new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12]);
-    let key_string = "*********someKey";
-    let numRounds = 20;
-    
-
-
+let setEncKey = (keyString, arrayLen) => {
+    // Setting default key if nothing is passed or wrong type of key
+    console.log("received keyString:",keyString, "and array length:", arrayLen);
+    var keyInt;
+    if(!isNormalInteger(keyString)){
+        keyInt = 1;
+    }
+    else{
+        keyInt = parseInt(keyString);
+    }
+    if(keyInt%arrayLen == 0){
+        keyInt = 1;
+    }else{
+        keyInt = keyInt%arrayLen;
+    }
+    console.log("returning keyInt:",keyInt);
+    return keyInt;
 }
