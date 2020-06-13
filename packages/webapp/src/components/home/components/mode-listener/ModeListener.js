@@ -9,6 +9,7 @@ function ModeListener() {
     const [audioTransmitter, setAudioTransmitter] = useState(new AudioTransmitter());
     const [buttonText, setButtonText] = useState('Start listening for mode');
     const history = useHistory();
+    const [encKey, setEncKey] = useState('');
 
     if (audioTransmitter.selfStateUpdater !== setAudioTransmitter) {
         audioTransmitter.selfStateUpdater = setAudioTransmitter;
@@ -35,9 +36,16 @@ function ModeListener() {
         }
     }
 
+    const encKeyChanged = (event) =>{
+        setEncKey(event.target.value);
+        localStorage.setItem("encKey", event.target.value);
+    }
+
     return (
         <div className="full-screen-base">
             <div className="full-screen-container centered-dimensions">
+                <p className="input-item">{`Input your key`}</p>
+                <input value={encKey} onChange={encKeyChanged} className="input-item" />
                 <RoundedButton
                     text={buttonText}
                     onClick={startRecording}

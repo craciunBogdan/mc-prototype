@@ -1,4 +1,4 @@
-import { byteToFrequency, buildFrequencyArray, checkRequestType, colorToByteArray, intToByteArray, stringToByteArray, areSameFrequency, isRequestMarkTone, isResponseMarkTone, frequencyToByte, byteArrayToColor, byteArrayToInt, byteArrayToString, createOscillator, hexToRGBArray, buildIntegerRequestArray, buildStringRequestArray, buildColorRequestArray, isNoise } from './audio-utils';
+import { byteToFrequency, buildFrequencyArray, checkRequestType, colorToByteArray, intToByteArray, stringToByteArray, areSameFrequency, isRequestMarkTone, isResponseMarkTone, frequencyToByte, byteArrayToColor, byteArrayToInt, byteArrayToString, createOscillator, hexToRGBArray, buildIntegerRequestArray, buildStringRequestArray, buildColorRequestArray, isNoise, encryptNibbleArray, decryptNibbleArray} from './audio-utils';
 
 export default class AudioTransmitter {
     constructor(selfStateUpdater) {
@@ -12,8 +12,8 @@ export default class AudioTransmitter {
         this.timeOfRecording = 0;
 
         this.playbackValue = '255, 0, 255';
-        this.playbackBytes = colorToByteArray([255, 0, 255]);
-        this.playbackFrequencies = this.__buildFrequencyArray() // Hz
+        this.playbackBytes = colorToByteArray([100, 10, 200]);
+        this.playbackFrequencies = this.__buildFrequencyArray(this.sendType) // Hz
         this.playbackDuration = 1; // seconds
 
         this.analyser = null;
@@ -278,7 +278,7 @@ export default class AudioTransmitter {
         }
 
         this.playbackDuration = parseFloat(this.playbackDuration);
-        this.playbackFrequencies = this.__buildFrequencyArray();
+        this.playbackFrequencies = this.__buildFrequencyArray(this.sendType);
 
         this.selfUpdate();
         // TODO log debug??
@@ -307,7 +307,11 @@ export default class AudioTransmitter {
     // ===== PRIVATE METHODS (that can be still accessed from the outside but eh)
     // Function that receives the recording and generates the frequencies it finds and
     // how long they were recorded for.
-    __buildFrequencyArray = () => {
+    __buildFrequencyArray = (sendType) => {
+        // Encrypting only responses
+        if(sendType == 'response'){
+            this.playbackBytes = encryptNibbleArray(localStorage.getItem('encKey'), this.playbackBytes);
+        }                
         return buildFrequencyArray(this.playbackBytes, this.sendType);
     }
 
@@ -356,9 +360,11 @@ export default class AudioTransmitter {
                 }
             }
         }
-
+        
         switch (messageType) {
             case 'request':
+                // TODO decrypt requests in future?
+                // data = decryptNibbleArray(localStorage.getItem('encKey'), data);
                 var requestType = checkRequestType(data);
                 if (requestType === 'undefined') {
                     console.log("The received request did not comply with protocol. Check error to see what the problem was.");
@@ -369,6 +375,7 @@ export default class AudioTransmitter {
                 }
                 break;
             case 'response':
+                data = decryptNibbleArray(localStorage.getItem('encKey'), data);
                 switch (dt) {
                     case 'color':
                         return this.__processColor(data);
@@ -388,27 +395,29 @@ export default class AudioTransmitter {
     // Process the data when the data type is color
     __processColor = (data) => {
         console.log(data);
-        if (data.length !== 6) {
-            console.log("Unexpected number of values were received: " + data.length + "\nExpected 6");
-        } else {
+        //TODO: Why are these checks placeed here?
+        // if (data.length !== 6) { 
+        //     console.log("Unexpected number of values were received: " + data.length + "\nExpected 6");
+        // } else {
             var value = byteArrayToColor(data);
             console.log(value);
             console.log(`Received color:\nR:${value[0]}\nG:${value[1]}\nB:${value[2]}`);
             return value;
-        }
+        // }
     }
 
     // Process the data when the data type is integer
     __processInteger = (data) => {
         console.log(data);
         console.log(data.length);
-        if (data.length !== 8) {
-            console.log("Unexpected number of values were received: " + data.length + "\nExpected 8.");
-        } else {
+        //TODO: Why are these checks placeed here?
+        // if (data.length !== 8) {
+        //     console.log("Unexpected number of values were received: " + data.length + "\nExpected 8.");
+        // } else {
             var value = byteArrayToInt(data);
             console.log(`Received integer: ${value}`);
             return value;
-        }
+        // }
     }
 
     // Process the data when the data type is string

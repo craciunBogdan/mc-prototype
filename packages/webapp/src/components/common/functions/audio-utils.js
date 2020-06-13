@@ -71,7 +71,7 @@ export const buildStringRequestArray = () => {
 };
 
 export const checkRequestType = (byteArray) => {
-    if (byteArray.length > 1) {
+    if (byteArray.length > 2) {
         console.error("Unexpected number of frequencies in request message: " + byteArray.length);
         return 'undefined';
     }
@@ -142,6 +142,37 @@ export const isNoise = (freq) => {
     return Math.abs(freq - byteToFrequency(frequencyToByte(freq))) > 10 || freq > MAX_FREQUENCY;
 }
 
+export const encryptNibbleArray = (keyString, nibbleArray) => {
+    // Converting key string to int;
+    var keyInt = setEncKey(keyString, nibbleArray.length);
+    console.log("Encryption key in integer", keyInt, "Derived from string", keyString);
+
+    if(!Array.isArray(nibbleArray) || !nibbleArray.length){
+        console.error("Nothing to encrypt: nibbleArray is empty.");
+        return [];
+    }
+    console.log("Nibble array", nibbleArray);
+
+    var encryptedNibbleArray = nibbleArray.concat(nibbleArray.splice(0,nibbleArray.length - keyInt));
+    console.log("Encrypted Nibble Array", encryptedNibbleArray);
+
+    return encryptedNibbleArray;
+}
+
+export const decryptNibbleArray = (keyString, encryptedNibbleArray) => {
+    // Converting key string to int;
+    var keyInt = setEncKey(keyString, encryptedNibbleArray.length);
+    console.log("Encryption key in integer:", keyInt, "Derived from string:", keyString);
+
+    console.log("Received encrypted Nibble array", encryptedNibbleArray);
+
+    var decryptedNibbleArray = encryptedNibbleArray.concat(encryptedNibbleArray.splice(0,keyInt));
+    console.log("Decrypted Nibble Array", decryptedNibbleArray);
+
+    return decryptedNibbleArray;
+}
+
+
 let byteToNibbleArray = (value) => {
     var nibbleArray = [0, 0];
 
@@ -150,7 +181,7 @@ let byteToNibbleArray = (value) => {
         nibbleArray[i] = nibble;
         value = (value - nibble) / 16;
     }
-
+    // console.log("nibble array:", nibbleArray);
     return nibbleArray;
 }
 
@@ -185,4 +216,28 @@ let concatenateAllSubarrays = (array) => {
     }
 
     return result;
+}
+
+let isNormalInteger = (str) => {
+    var n = Math.floor(Number(str));
+    return n !== Infinity && String(n) === str && n >= 0;
+}
+
+let setEncKey = (keyString, arrayLen) => {
+    // Setting default key if nothing is passed or wrong type of key
+    console.log("received keyString:",keyString, "and array length:", arrayLen);
+    var keyInt;
+    if(!isNormalInteger(keyString)){
+        keyInt = 1;
+    }
+    else{
+        keyInt = parseInt(keyString);
+    }
+    if(keyInt%arrayLen == 0){
+        keyInt = 1;
+    }else{
+        keyInt = keyInt%arrayLen;
+    }
+    console.log("returning keyInt:",keyInt);
+    return keyInt;
 }
