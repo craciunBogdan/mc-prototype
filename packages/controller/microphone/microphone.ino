@@ -193,22 +193,22 @@ void processData (double recordingMap[], double sampleRate[], int arraySize) {
   }
   
 //  processColor(dataValues, dataIndex);
-  processInteger(dataValues, dataIndex);
-//  processString(dataValues, dataIndex);
+//  processInteger(dataValues, dataIndex);
+  processString(dataValues, dataIndex);
 }
 
 void processColor (double dataValues[], int arraySize) {
   double chunkedColor[arraySize/2];
   int indexChunk = 0;
   tft.fillScreen(TFT_BLACK);
-  if (arraySize != 6) {
-    Serial.println("Unexpected number of values were received");
-  } else {
+//  if (arraySize != 6) {
+//    Serial.println("Unexpected number of values were received");
+//  } else {
     for (int i = 0; i < arraySize; i += 2) {
       chunkedColor[indexChunk] = (dataValues[i+1] * 16) + dataValues[i];
       Serial.println(chunkedColor[indexChunk]);
       indexChunk++;
-    }
+//    }
     // LED
     ledcAttachPin(redpin, 1);
     ledcAttachPin(bluepin, 2);
@@ -223,8 +223,8 @@ void processColor (double dataValues[], int arraySize) {
     ledcWrite(3, chunkedColor[2]);
     tft.drawString("Color received", 5, 90, 2);
     tft.drawNumber(chunkedColor[0], 5, 120, 2);
-    tft.drawNumber(chunkedColor[0], 25, 120, 2);
-    tft.drawNumber(chunkedColor[0], 45, 120, 2);
+    tft.drawNumber(chunkedColor[0], 35, 120, 2);
+    tft.drawNumber(chunkedColor[0], 65, 120, 2);
 
     drawCipherNum();
   }
@@ -241,7 +241,7 @@ void processInteger (double dataValues[], int arraySize) {
     }
     Serial.println(value);
     tft.drawString("Integer received", 5, 90, 2);
-    tft.drawNumber(value, 5, 120, 4);
+    tft.drawString((String)value, 5, 120, 4);
   }
   drawCipherNum();
 }
