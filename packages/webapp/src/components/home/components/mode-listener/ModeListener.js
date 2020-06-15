@@ -44,8 +44,7 @@ function ModeListener() {
     return (
         <div className="full-screen-base">
             <div className="full-screen-container centered-dimensions">
-                <p className="input-item">{`Input your key`}</p>
-                <input value={encKey} onChange={encKeyChanged} className="input-item" />
+                <p className="input-item">{`Key:`}<input value={encKey} onChange={encKeyChanged} className="input-item" /></p>
                 <RoundedButton
                     text={buttonText}
                     onClick={startRecording}
